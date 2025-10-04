@@ -1,0 +1,20 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: assurance
+      POSTGRES_PASSWORD: securepass
+      POSTGRES_DB: qbs
+
+  baseline-service:
+    build: ./services/baseline
+    ports:
+      - "8001:8000"
+    environment:
+      DATABASE_URL: postgres://assurance:securepass@postgres:5432/qbs
+    depends_on:
+      - postgres
