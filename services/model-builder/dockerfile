@@ -1,0 +1,12 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+COPY train_model.py .
+COPY training_data.csv .
+
+RUN pip install --no-cache-dir \
+    scikit-learn==1.3.0 \
+    pandas
+
+CMD ["python", "train_model.py"]

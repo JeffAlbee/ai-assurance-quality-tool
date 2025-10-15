@@ -1,0 +1,9 @@
+FROM python:3.14-slim
+
+WORKDIR /app
+
+COPY consumer.py BridgeTypeModel.pkl requirements.txt ./
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+CMD ["python", "consumer.py"]
