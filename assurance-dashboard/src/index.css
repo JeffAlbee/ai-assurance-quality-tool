@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom global styles */
+body {
+  @apply bg-gray-100 text-gray-900 font-sans antialiased min-h-screen m-0;
+}
+
+a {
+  @apply text-blue-600 font-medium no-underline transition-colors duration-200;
+}
+a:hover {
+  @apply text-blue-800;
+}
+
+h1 {
+  @apply text-4xl font-bold leading-tight;
+}
+
+button {
+  @apply rounded-md border border-transparent px-4 py-2 text-base font-medium bg-gray-800 text-white cursor-pointer transition-colors duration-200;
+}
+button:hover {
+  @apply border-blue-500;
+}
+button:focus,
+button:focus-visible {
+  @apply outline-none ring-2 ring-blue-400 ring-offset-2;
+}
