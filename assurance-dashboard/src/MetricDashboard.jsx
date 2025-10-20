@@ -34,16 +34,28 @@ const label = {
   },
 };
 
+function formatLabel(key) {
+  return key
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 function MetricDashboard({ section }) {
   const { metrics, baselines } = label;
 
   if (section === "scores") {
+    const scoreKeys = [
+      "model_reliability_score",
+      "audit_governance_score",
+      "trust_quality_score",
+    ];
+
     return (
       <div className="space-y-3">
-        {["model_reliability_score", "audit_governance_score", "trust_quality_score"].map((key) => (
+        {scoreKeys.map((key) => (
           <div key={key} className="flex justify-between border-b pb-2">
-            <span className="font-medium capitalize">{key.replace(/_/g, " ")}</span>
-            <span>{metrics[key]}</span>
+            <span className="font-medium">{formatLabel(key)}</span>
+            <span className="font-mono">{metrics[key]}</span>
           </div>
         ))}
       </div>
@@ -52,43 +64,46 @@ function MetricDashboard({ section }) {
 
   if (section === "metrics") {
     return (
-      <table className="w-full text-sm border">
-        <thead>
-          <tr className="bg-gray-200 text-left">
-            <th className="p-2">Metric</th>
-            <th className="p-2">Value</th>
-            <th className="p-2">Low</th>
-            <th className="p-2">High</th>
-            <th className="p-2">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Object.entries(metrics).map(([key, value]) => {
-            if (key.includes("score")) return null;
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border border-gray-300">
+          <thead>
+            <tr className="bg-gray-200 text-left">
+              <th className="p-2">Metric</th>
+              <th className="p-2">Value</th>
+              <th className="p-2">Low</th>
+              <th className="p-2">High</th>
+              <th className="p-2">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(metrics).map(([key, value]) => {
+              if (key.includes("score")) return null;
 
-            const baseline = baselines[key];
-            const low = baseline?.low ?? null;
-            const high = baseline?.high ?? null;
+              const baseline = baselines[key];
+              const low = baseline?.low ?? null;
+              const high = baseline?.high ?? null;
 
-            let status = "✅ OK";
-            if (low !== null && high !== null) {
-              if (value < low || value > high) {
+              let status = "✅ OK";
+              let statusColor = "text-green-600";
+
+              if (low !== null && high !== null && (value < low || value > high)) {
                 status = "❌ Violation";
+                statusColor = "text-red-600";
               }
-            }
 
-            return (
-              <tr key={key} className="border-t">
-                <td className="p-2">{key}</td>
-                <td className="p-2">{value}</td>
-                <td className="p-2">{low}</td>
-                <td className="p-2">{high}</td>
-                <td className="p-2">{status}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+              return (
+                <tr key={key} className="border-t border-gray-200">
+                  <td className="p-2 font-medium">{formatLabel(key)}</td>
+                  <td className="p-2 font-mono">{value}</td>
+                  <td className="p-2 font-mono">{low}</td>
+                  <td className="p-2 font-mono">{high}</td>
+                  <td className={`p-2 font-semibold ${statusColor}`}>{status}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     );
   }
 

@@ -10,7 +10,9 @@ import json
 import time
 import os
 
-# ✅ FastAPI app setup
+# ─────────────────────────────────────────────────────────────
+# ✅ FastAPI App Setup
+# ─────────────────────────────────────────────────────────────
 app = FastAPI()
 LOG_FILE = "assurance_labels.log"
 
@@ -22,13 +24,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Database setup
+# ─────────────────────────────────────────────────────────────
+# ✅ Database Setup
+# ─────────────────────────────────────────────────────────────
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:yourpassword@localhost/assurance_db")
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
-# ✅ SQLAlchemy model
+# ─────────────────────────────────────────────────────────────
+# ✅ SQLAlchemy Models
+# ─────────────────────────────────────────────────────────────
 class Violation(Base):
     __tablename__ = "violations"
     id = Column(Integer, primary_key=True, index=True)
@@ -44,7 +50,9 @@ class Violation(Base):
 
 Base.metadata.create_all(bind=engine)
 
-# ✅ Dependency
+# ─────────────────────────────────────────────────────────────
+# ✅ Dependency Injection
+# ─────────────────────────────────────────────────────────────
 def get_db():
     db = SessionLocal()
     try:
@@ -52,7 +60,9 @@ def get_db():
     finally:
         db.close()
 
-# ✅ Pydantic schema
+# ─────────────────────────────────────────────────────────────
+# ✅ Pydantic Schemas
+# ─────────────────────────────────────────────────────────────
 class ViolationPayload(BaseModel):
     model_id: str
     metric: str
@@ -63,7 +73,16 @@ class ViolationPayload(BaseModel):
     source: str
     user: str
 
-# ✅ POST: Log assurance label to file
+class LicenseStatus(BaseModel):
+    status: str       # "active" or "inactive"
+    txid: str         # mock or real TXID
+    checked_at: datetime
+
+# ─────────────────────────────────────────────────────────────
+# ✅ Routes
+# ─────────────────────────────────────────────────────────────
+
+# 🔹 POST: Log assurance label to file
 @app.post("/v1/labels")
 async def receive_label(request: Request):
     try:
@@ -75,7 +94,7 @@ async def receive_label(request: Request):
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
-# ✅ POST: Log violation to database
+# 🔹 POST: Log violation to database
 @app.post("/v1/violations")
 def log_violation(payload: ViolationPayload, db: Session = Depends(get_db)):
     violation = Violation(**payload.dict())
@@ -83,18 +102,32 @@ def log_violation(payload: ViolationPayload, db: Session = Depends(get_db)):
     db.commit()
     return { "status": "logged", "id": violation.id }
 
-# ✅ GET: Retrieve violations by model_id
+# 🔹 GET: Retrieve violations by model_id
 @app.get("/v1/violations")
 def get_violations(model_id: str, db: Session = Depends(get_db)):
     violations = db.query(Violation).filter(Violation.model_id == model_id).order_by(Violation.timestamp.desc()).all()
-    return [ {
-        "id": v.id,
-        "metric": v.metric,
-        "value": v.value,
-        "baseline_low": v.baseline_low,
-        "baseline_high": v.baseline_high,
-        "violation_type": v.violation_type,
-        "source": v.source,
-        "user": v.user,
-        "timestamp": v.timestamp
-    } for v in violations ]
+    return [
+        {
+            "id": v.id,
+            "metric": v.metric,
+            "value": v.value,
+            "baseline_low": v.baseline_low,
+            "baseline_high": v.baseline_high,
+            "violation_type": v.violation_type,
+            "source": v.source,
+            "user": v.user,
+            "timestamp": v.timestamp
+        }
+        for v in violations
+    ]
+
+# 🔹 GET: License Status Check
+@app.get("/v1/license/status", response_model=LicenseStatus)
+def get_license_status():
+    return LicenseStatus(
+        status="active",
+        level="premium",
+        txid="demo-txid-001",
+        checked_at=datetime.utcnow(),
+        expires_at=datetime.utcnow() + timedelta(days=30)
+    )
