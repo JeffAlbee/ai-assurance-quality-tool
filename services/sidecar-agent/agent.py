@@ -3,6 +3,16 @@ import uuid
 import hashlib
 import requests
 import json
+import logging
+import os
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
+# Configurable settings
+TIB_URL = os.getenv("TIB_URL", "http://tib-producer-api:8002/ingest")
+MODEL_ID = os.getenv("MODEL_ID", "flood-risk-predictor")
+SYSTEM_POWER_W = float(os.getenv("SYSTEM_POWER_W", "42.0"))
 
 # Simulated model for demonstration purposes
 class DummyModel:
@@ -30,18 +40,20 @@ def capture_inference(model, input_data):
         "attribution": output_data.get("attribution", [])
     }
 
-# Step 2: Build telemetry payload with audit hash and feature array
+# Step 2: Build telemetry payload with TXID and audit hash
 def build_payload(model_id, inference_data):
+    txid = str(uuid.uuid4())
     input_data = inference_data["input"]
     output_data = inference_data["output"]
 
     payload = {
+        "txid": txid,
         "model_id": model_id,
         "inference_timestamp": int(time.time() * 1000),
         "request_payload": input_data,
         "response_payload": output_data,
         "ground_truth": None,
-        "system_power_w": 42.0,
+        "system_power_w": SYSTEM_POWER_W,
         "confidence_score": inference_data["confidence"],
         "attribution_vector": inference_data["attribution"],
         "features": [
@@ -57,27 +69,24 @@ def build_payload(model_id, inference_data):
 
 # Step 3: Send payload to TIB Producer API with retry logic
 def send_to_tib(payload, retries=10, delay=3):
-    url = "http://tib-producer-api:8002/ingest"
     for attempt in range(retries):
         try:
-            response = requests.post(url, json=payload)
-            print(f"[Sidecar] Telemetry sent: {payload['txid_hash']} | Status: {response.status_code}")
+            response = requests.post(TIB_URL, json=payload)
+            logging.info(f"[Sidecar] Telemetry sent: {payload['txid_hash']} | Status: {response.status_code}")
             return
         except Exception as e:
-            print(f"[Sidecar] Attempt {attempt+1} failed: {e}")
+            logging.warning(f"[Sidecar] Attempt {attempt+1} failed: {e}")
             time.sleep(delay)
-    print("[Sidecar] Failed to send telemetry after retries.")
+    logging.error("[Sidecar] Failed to send telemetry after retries.")
 
 # Step 4: Main execution block
 if __name__ == "__main__":
     model = DummyModel()
-    model_id = "flood-risk-predictor"
-
     input_data = {
         "rainfall_mm": 85.2,
         "bridge_type_encoded": 3
     }
 
     inference_data = capture_inference(model, input_data)
-    payload = build_payload(model_id, inference_data)
+    payload = build_payload(MODEL_ID, inference_data)
     send_to_tib(payload)

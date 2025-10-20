@@ -1,29 +1,63 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel
-from typing import Optional
+from typing import Dict
+from sqlalchemy import Column, String, DateTime, JSON, create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
+from datetime import datetime
+import os
 
+# ✅ FastAPI app
 app = FastAPI()
 
-class BaselineRequest(BaseModel):
+# ✅ SQLAlchemy setup
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:yourpassword@localhost/assurance_db")
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# ✅ SQLAlchemy model
+class Baseline(Base):
+    __tablename__ = "baselines"
+    model_id = Column(String, primary_key=True, index=True)
+    thresholds = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+Base.metadata.create_all(bind=engine)
+
+# ✅ Dependency
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# ✅ Pydantic schema
+class BaselinePayload(BaseModel):
     model_id: str
-    metric_name: str
-    value: float
-    timestamp: int
-    feature_name: Optional[str] = None  # For domain violations or drift
-    baseline_min: Optional[float] = None
-    baseline_max: Optional[float] = None
+    thresholds: Dict[str, Dict[str, float]]  # e.g. { "accuracy": { "low": 0.88, "high": 0.95 } }
 
-    class Config:
-        protected_namespaces = ()
+# ✅ POST endpoint
+@app.post("/v1/baselines")
+def create_baseline(payload: BaselinePayload, db: Session = Depends(get_db)):
+    existing = db.query(Baseline).filter(Baseline.model_id == payload.model_id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Baseline already exists")
 
-@app.post("/baseline")
-async def receive_baseline_metric(request: BaselineRequest):
-    print(f"[Baseline] Received {request.metric_name} for model {request.model_id} at {request.timestamp}")
-    
-    # Optional domain check logic
-    if request.feature_name and request.baseline_min is not None and request.baseline_max is not None:
-        if request.value < request.baseline_min or request.value > request.baseline_max:
-            print(f"[Baseline] Domain violation detected on {request.feature_name}: {request.value}")
-            return {"status": "violation", "feature": request.feature_name, "value": request.value}
+    baseline = Baseline(model_id=payload.model_id, thresholds=payload.thresholds)
+    db.add(baseline)
+    db.commit()
+    return { "status": "created", "model_id": payload.model_id }
 
-    return {"status": "ok", "metric": request.metric_name, "value": request.value}
+# ✅ GET endpoint
+@app.get("/v1/baselines/{model_id}")
+def get_baseline(model_id: str, db: Session = Depends(get_db)):
+    baseline = db.query(Baseline).filter(Baseline.model_id == model_id).first()
+    if not baseline:
+        raise HTTPException(status_code=404, detail="Baseline not found")
+    return {
+        "model_id": baseline.model_id,
+        "thresholds": baseline.thresholds,
+        "created_at": baseline.created_at
+    }

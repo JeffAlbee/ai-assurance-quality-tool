@@ -1,10 +1,9 @@
-version: '3.8'
-
 services:
 
-  # Zookeeper for Kafka coordination
+  # 🧭 Zookeeper for Kafka coordination
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
     ports:
       - "2181:2181"
     environment:
@@ -13,9 +12,10 @@ services:
     networks:
       - ai-assurance-net
 
-  # Kafka broker for telemetry ingestion
+  # 📡 Kafka broker for telemetry ingestion
   kafka:
     image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
     ports:
       - "9092:9092"
     environment:
@@ -35,29 +35,21 @@ services:
     networks:
       - ai-assurance-net
 
-  # Kafka topic initializer
+  # 🧱 Kafka topic initializer
   kafka-init:
     build: ./services/kafka-init
+    container_name: kafka-init
     depends_on:
       - kafka
     restart: "no"
     networks:
       - ai-assurance-net
 
-  # TIB producer service (sends messages to Kafka)
-  tib-producer:
-    build: ./services/tib-producer
-    depends_on:
-      - kafka
-    command: python producer.py
-    networks:
-      - ai-assurance-net
-
-  # MMS consumer service (reads and processes Kafka messages)
+  # 🧠 MMS consumer (reads and processes Kafka messages)
   mms-consumer:
     build:
       context: ./services/mms-consumer
-    container_name: ai-assurance-quality-tool-mms-consumer
+    container_name: mms-consumer
     depends_on:
       kafka:
         condition: service_healthy
@@ -65,35 +57,80 @@ services:
     networks:
       - ai-assurance-net
 
-  # TIB producer API (receives payloads from ASA)
+  # 🌐 TIB Producer API (receives telemetry from ASA)
   tib-producer-api:
     build: ./services/tib-producer-api
+    container_name: tib-producer-api
     ports:
       - "8002:8000"
     depends_on:
       - kafka
     restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - ai-assurance-net
 
-  # Quality Baseline Service (QBS)
+  # 🗄️ PostgreSQL for baseline storage
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: yourpassword
+      POSTGRES_DB: assurance_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - ai-assurance-net
+
+  # 📊 Quality Baseline Service (QBS)
   baseline-service:
     build: ./services/baseline
+    container_name: baseline-service
     ports:
-      - "8000:8000"
+      - "8001:8000"
     restart: on-failure
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://postgres:yourpassword@postgres/assurance_db
     networks:
       - ai-assurance-net
 
-  # Assurance Sidecar Agent (ASA)
+  # 🛰️ Assurance Sidecar Agent (ASA)
   sidecar-agent:
     build: ./services/sidecar-agent
+    container_name: sidecar-agent
     depends_on:
       - tib-producer-api
     entrypoint: ["sh", "-c", "sleep 10 && python agent.py"]
     restart: on-failure
     networks:
       - ai-assurance-net
+
+  # 🧾 Assurance Service (AS)
+  assurance-service:
+    build: ./services/assurance-service
+    container_name: assurance-service
+    ports:
+      - "8000:8000"
+    restart: on-failure
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/assurance_db
+    networks:
+      - ai-assurance-net
+
+volumes:
+  postgres_data:
 
 networks:
   ai-assurance-net:

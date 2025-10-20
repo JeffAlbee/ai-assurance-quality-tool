@@ -5,17 +5,13 @@ WORKDIR /app
 # Optional: install debugging tools
 RUN apt-get update && apt-get install -y \
     curl \
+    build-essential \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies from requirements.txt if present
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt || true
-
-# Ensure core packages are installed regardless of requirements.txt
-RUN pip install --no-cache-dir \
-    fastapi \
-    uvicorn \
-    pydantic
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .

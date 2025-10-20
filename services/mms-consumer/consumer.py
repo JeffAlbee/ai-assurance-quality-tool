@@ -1,100 +1,47 @@
 import json
-import time
-import pickle
-import traceback
-from kafka import KafkaConsumer, KafkaProducer
-from kafka.errors import NoBrokersAvailable
+import joblib
+from kafka import KafkaConsumer
 
-MODEL_PATH = "BridgeTypeModel.pkl"
-BOOTSTRAP_SERVERS = "kafka:9092"
-INPUT_TOPIC = "live_model_metrics"
-OUTPUT_TOPIC = "scored_model_metrics"
-GROUP_ID = "mms-consumer"
+# Kafka topic and broker
+TOPIC = "live_model_metrics"
+BOOTSTRAP_SERVERS = ["kafka:9092"]
 
-# Hardcoded baseline for demo
-BASELINE = {
-    "bridge_type_encoded": {"min": 0, "max": 3},
-    "span_length_m": {"min": 10, "max": 100},
-    "expected_prediction": "safe"
-}
-
-def check_baseline(features, prediction):
-    violations = []
-
-    if not (BASELINE["bridge_type_encoded"]["min"] <= features[0] <= BASELINE["bridge_type_encoded"]["max"]):
-        violations.append("bridge_type_encoded out of range")
-
-    if not (BASELINE["span_length_m"]["min"] <= features[1] <= BASELINE["span_length_m"]["max"]):
-        violations.append("span_length_m out of range")
-
-    if prediction != BASELINE["expected_prediction"]:
-        violations.append(f"prediction mismatch: expected {BASELINE['expected_prediction']}, got {prediction}")
-
-    return violations
-
-# Load model
+# Try loading the model
 try:
-    with open(MODEL_PATH, "rb") as f:
-        model = pickle.load(f)
-    model_version = getattr(model, "version", "unknown")
-except Exception as e:
-    print("[MMS] ❌ Model load failed:", e)
-    exit(1)
+    model = joblib.load("BridgeTypeModel.pkl")
+    print("[MMS] ✅ Model loaded successfully.")
+except FileNotFoundError:
+    print("[MMS] ⚠️ BridgeTypeModel.pkl not found. Using default prediction.")
+    model = None
 
-# Connect to Kafka
-for attempt in range(10):
-    try:
-        consumer = KafkaConsumer(
-            INPUT_TOPIC,
-            bootstrap_servers=BOOTSTRAP_SERVERS,
-            group_id=GROUP_ID,
-            auto_offset_reset="earliest",
-            value_deserializer=lambda m: json.loads(m.decode("utf-8"))
-        )
-        producer = KafkaProducer(
-            bootstrap_servers=BOOTSTRAP_SERVERS,
-            value_serializer=lambda m: json.dumps(m).encode("utf-8")
-        )
-        break
-    except NoBrokersAvailable:
-        time.sleep(5)
-else:
-    print("[MMS] ❌ Kafka connection failed.")
-    exit(1)
+# Initialize Kafka consumer
+consumer = KafkaConsumer(
+    TOPIC,
+    bootstrap_servers=BOOTSTRAP_SERVERS,
+    value_deserializer=lambda m: json.loads(m.decode("utf-8")),
+    auto_offset_reset="earliest",
+    group_id="mms-consumer-group"
+)
 
-print("[MMS] ✅ Consumer loop started.")
+print("[MMS] 🔄 Waiting for messages...")
 
-for msg in consumer:
-    try:
-        telemetry = msg.value
-        txid = telemetry.get("txid", "unknown")
-        bridge_type = telemetry.get("bridge_type_encoded")
-        span_length = telemetry.get("span_length_m")
-        features = [bridge_type, span_length]
+# Message processing loop
+for message in consumer:
+    payload = message.value
+    txid = payload.get("txid")
+    features = payload.get("features", [])
 
-        if None in features:
-            print(f"[MMS] ⚠️ Missing features for txid: {txid}")
-            continue
+    print(f"[MMS] 📥 Received telemetry: TXID={txid}, Features={features}")
 
-        prediction = model.predict([features])[0]
-        violations = check_baseline(features, prediction)
+    # Predict or fallback
+    if model:
+        try:
+            prediction = model.predict([features])[0]
+        except Exception as e:
+            print(f"[MMS] ❌ Prediction error: {e}")
+            prediction = 0
+    else:
+        prediction = 0  # Default label for demo
 
-        label = {
-            "txid": txid,
-            "model_version": model_version,
-            "features": {
-                "bridge_type_encoded": bridge_type,
-                "span_length_m": span_length
-            },
-            "prediction": prediction,
-            "baseline_expected": BASELINE["expected_prediction"],
-            "violations": violations,
-            "timestamp": time.time()
-        }
-
-        producer.send(OUTPUT_TOPIC, label)
-        print(f"[MMS] ✅ Scored {txid} → {prediction} | Violations: {len(violations)}")
-
-    except Exception as e:
-        print(f"[MMS] ❌ Error processing txid: {txid}")
-        traceback.print_exc()
+    # Log result
+    print(f"[MMS] ✅ TXID={txid} | Label={prediction}")
