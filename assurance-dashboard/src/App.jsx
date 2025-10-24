@@ -109,6 +109,23 @@ function App() {
     );
   };
 
+  const GrafanaTab = () => {
+    return (
+      <main className="px-4 py-6">
+        <h2 className="text-xl font-semibold mb-4">Live Baseline Activity</h2>
+        <div className="rounded border bg-white p-4 shadow">
+          <iframe
+            src="http://localhost:3000/d/c017a79c-896b-470d-a7d1-1c30ec04dab8?orgId=1&from=now-6h&to=now"
+            width="100%"
+            height="600"
+            frameBorder="0"
+            title="Grafana Baseline Logs"
+          />
+        </div>
+      </main>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[#F5F5F5] text-gray-900">
       <header className="px-4 py-3 bg-[#003865] shadow">
@@ -148,6 +165,14 @@ function App() {
             }`}
           >
             License
+          </button>
+          <button
+            onClick={() => setActiveTab("grafana")}
+            className={`text-white px-3 py-1 rounded ${
+              activeTab === "grafana" ? "bg-blue-700" : "bg-blue-500"
+            }`}
+          >
+            Baseline Logs
           </button>
         </nav>
       </header>
@@ -189,6 +214,7 @@ function App() {
       )}
 
       {activeTab === "license" && <LicenseTab />}
+      {activeTab === "grafana" && <GrafanaTab />}
     </div>
   );
 }
