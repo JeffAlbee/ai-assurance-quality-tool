@@ -16,44 +16,44 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 # ─────────────────────────────────────────────────────────────
 TIB_URL = os.getenv("TIB_URL", "http://tib-producer-api:8002/ingest")
 ASSURANCE_URL = os.getenv("ASSURANCE_URL", "http://assurance-service:8000/v1/labels")
+MODEL_URL = os.getenv("MODEL_URL", "http://model-builder:9000/predict")
 MODEL_ID = os.getenv("MODEL_ID", "flood-risk-predictor")
 SYSTEM_POWER_W = float(os.getenv("SYSTEM_POWER_W", "42.0"))
+POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "10"))
 
 # ─────────────────────────────────────────────────────────────
-# ✅ Dummy Model (Replace with real model later)
+# ✅ Step 1: Poll Model API with Traceability Headers
 # ─────────────────────────────────────────────────────────────
-class DummyModel:
-    def predict(self, input_data):
-        return {
-            "prediction": "flood_risk_high",
-            "confidence": 0.92,
-            "attribution": [
-                {"feature": "rainfall_mm", "score": 0.6},
-                {"feature": "bridge_type_encoded", "score": 0.3}
-            ]
-        }
-
-# ─────────────────────────────────────────────────────────────
-# ✅ Step 1: Capture Inference
-# ─────────────────────────────────────────────────────────────
-def capture_inference(model, input_data):
-    start_time = time.time()
-    output_data = model.predict(input_data)
-    latency_ms = int((time.time() - start_time) * 1000)
-
-    return {
-        "input": input_data,
-        "output": output_data,
-        "latency_ms": latency_ms,
-        "confidence": output_data.get("confidence"),
-        "attribution": output_data.get("attribution", [])
+def poll_model(input_data, txid):
+    headers = {
+        "X-Model-ID": MODEL_ID,
+        "X-TXID": txid,
+        "X-Sidecar-Agent": "true"
     }
+
+    try:
+        response = requests.post(MODEL_URL, json=input_data, headers=headers, timeout=5)
+        response.raise_for_status()
+        result = response.json()
+        latency_ms = result["metrics"].get("p95_latency", 0)
+
+        return {
+            "input": input_data,
+            "output": result["prediction"],
+            "latency_ms": latency_ms,
+            "confidence": result["prediction"].get("confidence"),
+            "attribution": [],
+            "txid": txid
+        }
+    except Exception as e:
+        logging.error(f"[Sidecar] Model polling failed: {e}")
+        return None
 
 # ─────────────────────────────────────────────────────────────
 # ✅ Step 2: Build Full Telemetry Payload
 # ─────────────────────────────────────────────────────────────
 def build_payload(model_id, inference_data):
-    txid = str(uuid.uuid4())
+    txid = inference_data.get("txid", str(uuid.uuid4()))
     input_data = inference_data["input"]
     output_data = inference_data["output"]
 
@@ -99,7 +99,7 @@ def send_to_assurance(payload):
     label = {
         "txid": payload["txid"],
         "model_id": payload["model_id"],
-        "prediction": payload["response_payload"]["prediction"],
+        "prediction": payload["response_payload"]["label"],
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     }
     try:
@@ -109,17 +109,20 @@ def send_to_assurance(payload):
         logging.error(f"[Sidecar] Failed to send label to assurance-service: {e}")
 
 # ─────────────────────────────────────────────────────────────
-# ✅ Step 4: Main Execution Block
+# ✅ Step 4: Main Loop
 # ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    model = DummyModel()
-    input_data = {
-        "rainfall_mm": 85.2,
-        "bridge_type_encoded": 3
-    }
+    while True:
+        input_data = {
+            "rainfall_mm": 85.2,
+            "bridge_type_encoded": 3
+        }
 
-    inference_data = capture_inference(model, input_data)
-    payload = build_payload(MODEL_ID, inference_data)
+        txid = str(uuid.uuid4())
+        inference_data = poll_model(input_data, txid)
+        if inference_data:
+            payload = build_payload(MODEL_ID, inference_data)
+            send_to_tib(payload)
+            send_to_assurance(payload)
 
-    send_to_tib(payload)
-    send_to_assurance(payload)
+        time.sleep(POLL_INTERVAL)
