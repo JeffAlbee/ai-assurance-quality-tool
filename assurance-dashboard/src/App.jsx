@@ -2,129 +2,161 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import MetricDashboard from "./MetricDashboard";
 import ViolationDashboard from "./ViolationDashboard";
+import ModelConfigForm from "./ModelConfigForm";
+import HistoricalExports from "./HistoricalExports";
 
 function App() {
-  const [activeTab, setActiveTab] = useState("metrics");
+  const [activeTab, setActiveTab] = useState("grafanaMetrics");
   const [licenseInfo, setLicenseInfo] = useState(null);
 
   useEffect(() => {
     axios
       .get("http://localhost:8000/v1/license/status")
       .then((res) => setLicenseInfo(res.data))
-      .catch(() =>
-        setLicenseInfo({
-          status: "inactive",
-          level: "basic",
-          txid: "N/A",
-          checked_at: null,
-          expires_at: null,
-        })
-      );
+      .catch(() => {
+        console.warn("License status fetch failed");
+        setLicenseInfo({ status: "inactive", level: "basic" });
+      });
   }, []);
 
-  const LicenseBanner = () => {
+  const LicenseHeader = () => {
     if (!licenseInfo) return null;
-
-    const isActive = licenseInfo.status === "active";
-    const bannerColor = isActive
-      ? "bg-green-100 border-green-500"
-      : "bg-red-100 border-red-500";
-    const icon = isActive ? "✅" : "❌";
-    const level = licenseInfo.level || "basic";
-
-    let countdownText = "Expiration date not available";
-    if (licenseInfo.expires_at) {
-      const now = new Date();
-      const expires = new Date(licenseInfo.expires_at);
-      const diffDays = Math.ceil((expires - now) / (1000 * 60 * 60 * 24));
-      countdownText =
-        diffDays > 0
-          ? `${diffDays} day${diffDays !== 1 ? "s" : ""} remaining`
-          : "Expired";
-    }
+    const { level = "basic", status } = licenseInfo;
+    const isActive = status === "active";
+    const statusStyle = isActive ? "text-green-600 font-bold" : "text-red-600 font-bold";
+    const statusText = isActive ? "Active" : "Expired";
 
     return (
-      <div className={`px-4 py-2 mb-4 border-l-4 ${bannerColor} text-sm`}>
+      <div className="mb-4 text-sm">
         <p className="text-lg font-semibold">
           <strong>License Level:</strong> {level}
         </p>
-        <p className="text-lg font-semibold">
-          {icon} <strong>License Status:</strong> {licenseInfo.status}
-        </p>
-        <p>
-          <strong>TXID:</strong> {licenseInfo.txid}
-        </p>
-        <p>
-          <strong>Checked At:</strong>{" "}
-          {licenseInfo.checked_at
-            ? new Date(licenseInfo.checked_at).toLocaleString()
-            : "N/A"}
-        </p>
-        <p>
-          <strong>Expires In:</strong>{" "}
-          <span className={countdownText === "Expired" ? "text-red-600" : ""}>
-            {countdownText}
-          </span>
-        </p>
-        <p className="mt-2 italic text-gray-700">
-          Basic license is free. Premium unlocks full assurance features.
+        <p className={`text-lg font-semibold ${statusStyle}`}>
+          <strong>License Status:</strong> {statusText}
         </p>
       </div>
     );
   };
 
-  const LicenseTab = () => {
-    const level = licenseInfo?.level || "basic";
-
-    return (
-      <main className="px-4 py-6 space-y-4">
-        <LicenseBanner />
-        <section>
-          <h2 className="text-xl font-semibold mb-2">License Details</h2>
-          <p className="text-sm">
-            <strong>Current Level:</strong> {level}
-          </p>
-          <p className="text-sm">
-            <strong>Upgrade Info:</strong>{" "}
-            {level === "premium"
-              ? "You are on a premium license. Thank you!"
-              : "Upgrade to premium to unlock full assurance features."}
-          </p>
-        </section>
-
-        {level === "basic" && (
-          <section>
-            <h2 className="text-xl font-semibold mb-2">Upgrade to Premium</h2>
-            <p className="text-sm mb-2">
-              Scan the QR code below to upgrade your license via Bitcoin.
-            </p>
-            <img
-              src="/bitcoin_qr.png"
-              alt="Pay via Bitcoin QR"
-              className="h-32 w-auto border rounded"
-            />
-          </section>
-        )}
-      </main>
-    );
+  const TabContent = () => {
+    switch (activeTab) {
+      case "grafanaMetrics":
+        return (
+          <main className="px-4 py-6">
+            <LicenseHeader />
+            <h2 className="text-xl font-semibold mb-4">Real-Time Metrics</h2>
+            <div className="rounded border bg-white p-4 shadow">
+              <iframe
+                src="http://localhost:3000/goto/cf2c91agdo2kgf?orgId=1"
+                width="100%"
+                height="600"
+                frameBorder="0"
+                title="Grafana Assurance Metrics"
+              />
+            </div>
+          </main>
+        );
+      case "metrics":
+        return (
+          <main className="px-4 py-6 space-y-6">
+            <LicenseHeader />
+            <section>
+              <h2 className="text-xl font-semibold">Latest Assurance Label</h2>
+              <div className="space-y-1 text-sm">
+                <p><strong>TxID:</strong> demo-001</p>
+                <p><strong>Model:</strong> BridgeTypeModel-v1</p>
+                <p><strong>Prediction:</strong> safe</p>
+                <p><strong>Timestamp:</strong> 2025-10-15T21:12:34Z</p>
+              </div>
+            </section>
+            <section>
+              <h2 className="text-xl font-semibold mb-4">Assurance Metrics Snapshot</h2>
+              <MetricDashboard section="assurance" />
+            </section>
+          </main>
+        );
+      case "violations":
+        return (
+          <main className="px-4 py-6">
+            <LicenseHeader />
+            <ViolationDashboard />
+          </main>
+        );
+      case "baseline":
+        return (
+          <main className="px-4 py-6">
+            <LicenseHeader />
+            <h2 className="text-xl font-semibold mb-4">Baseline & Tolerances</h2>
+            <div className="rounded border bg-white p-4 shadow">
+              <iframe
+                src="http://localhost:3000/d/c017a79c-896b-470d-a7d1-1c30ec04dab8?orgId=1&from=now-6h&to=now"
+                width="100%"
+                height="600"
+                frameBorder="0"
+                title="Grafana Baseline & Tolerances"
+              />
+            </div>
+          </main>
+        );
+      case "config":
+        return (
+          <main className="px-4 py-6">
+            <LicenseHeader />
+            <h2 className="text-xl font-semibold mb-4">Model Configuration</h2>
+            <ModelConfigForm />
+          </main>
+        );
+      case "exports":
+        return (
+          <main className="px-4 py-6">
+            <LicenseHeader />
+            <h2 className="text-xl font-semibold mb-4">Historical Exports</h2>
+            <HistoricalExports modelId="flood-risk-predictor" />
+          </main>
+        );
+      case "license":
+        return (
+          <main className="px-4 py-6 space-y-4">
+            <LicenseHeader />
+            <section>
+              <h2 className="text-xl font-semibold mb-2">License Details</h2>
+              <p className="text-sm"><strong>Current Level:</strong> {licenseInfo?.level || "basic"}</p>
+              <p className="text-sm">
+                <strong>Upgrade Info:</strong>{" "}
+                {licenseInfo?.level === "premium"
+                  ? "You are on a premium license. Thank you!"
+                  : "Upgrade to premium to unlock full assurance features."}
+              </p>
+            </section>
+            {licenseInfo?.level === "basic" && (
+              <section>
+                <h2 className="text-xl font-semibold mb-2">Upgrade to Premium</h2>
+                <p className="text-sm mb-2">
+                  Scan the QR code below to upgrade your license via Bitcoin.
+                </p>
+                <img
+                  src="/bitcoin_qr.png"
+                  alt="Pay via Bitcoin QR"
+                  className="h-32 w-auto border rounded"
+                />
+              </section>
+            )}
+          </main>
+        );
+      default:
+        return <main className="px-4 py-6">Invalid tab selected.</main>;
+    }
   };
 
-  const GrafanaTab = () => {
-    return (
-      <main className="px-4 py-6">
-        <h2 className="text-xl font-semibold mb-4">Live Baseline Activity</h2>
-        <div className="rounded border bg-white p-4 shadow">
-          <iframe
-            src="http://localhost:3000/d/c017a79c-896b-470d-a7d1-1c30ec04dab8?orgId=1&from=now-6h&to=now"
-            width="100%"
-            height="600"
-            frameBorder="0"
-            title="Grafana Baseline Logs"
-          />
-        </div>
-      </main>
-    );
-  };
+  const tabs = [
+    { key: "grafanaMetrics", label: "Real-Time Metrics" },
+    { key: "metrics", label: "Assurance Label" },
+    { key: "violations", label: "Violations" },
+    { key: "baseline", label: "Baseline & Tolerances" },
+    { key: "config", label: "Model Configuration" },
+    { key: "exports", label: "Historical Exports" },
+    { key: "license", label: "License" },
+  ];
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] text-gray-900">
@@ -138,83 +170,21 @@ function App() {
             />
           </div>
         </div>
-        <section className="mt-4">
-          <LicenseBanner />
-        </section>
-        <nav className="flex gap-4 mt-2">
-          <button
-            onClick={() => setActiveTab("metrics")}
-            className={`text-white px-3 py-1 rounded ${
-              activeTab === "metrics" ? "bg-blue-700" : "bg-blue-500"
-            }`}
-          >
-            Metrics
-          </button>
-          <button
-            onClick={() => setActiveTab("violations")}
-            className={`text-white px-3 py-1 rounded ${
-              activeTab === "violations" ? "bg-blue-700" : "bg-blue-500"
-            }`}
-          >
-            Violations
-          </button>
-          <button
-            onClick={() => setActiveTab("license")}
-            className={`text-white px-3 py-1 rounded ${
-              activeTab === "license" ? "bg-blue-700" : "bg-blue-500"
-            }`}
-          >
-            License
-          </button>
-          <button
-            onClick={() => setActiveTab("grafana")}
-            className={`text-white px-3 py-1 rounded ${
-              activeTab === "grafana" ? "bg-blue-700" : "bg-blue-500"
-            }`}
-          >
-            Baseline Logs
-          </button>
+        <nav className="flex gap-4 mt-4 flex-wrap">
+          {tabs.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`px-3 py-1 rounded ${
+                activeTab === key ? "bg-purple-700 text-white" : "bg-purple-500 text-white"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </nav>
       </header>
-
-      {activeTab === "metrics" && (
-        <main className="px-4 py-6 space-y-6">
-          <section>
-            <h2 className="text-xl font-semibold">Latest Assurance Label</h2>
-            <div className="space-y-1 text-sm">
-              <p>
-                <strong>TxID:</strong> demo-001
-              </p>
-              <p>
-                <strong>Model:</strong> BridgeTypeModel-v1
-              </p>
-              <p>
-                <strong>Prediction:</strong> safe
-              </p>
-              <p>
-                <strong>Timestamp:</strong> 2025-10-15T21:12:34Z
-              </p>
-            </div>
-          </section>
-          <section>
-            <h2 className="text-xl font-semibold mb-4">Composite Scores</h2>
-            <MetricDashboard section="scores" />
-          </section>
-          <section>
-            <h2 className="text-xl font-semibold mb-4">Metric Breakdown</h2>
-            <MetricDashboard section="metrics" />
-          </section>
-        </main>
-      )}
-
-      {activeTab === "violations" && (
-        <main className="px-4 py-6">
-          <ViolationDashboard />
-        </main>
-      )}
-
-      {activeTab === "license" && <LicenseTab />}
-      {activeTab === "grafana" && <GrafanaTab />}
+      {TabContent()}
     </div>
   );
 }
