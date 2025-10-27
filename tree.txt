@@ -4,142 +4,6 @@ jeffalbee@Jeffreys-MacBook-Air ai-assurance-quality-tool % tree -L 3
 │   ├── eslint.config.js
 │   ├── index.html
 │   ├── node_modules
-│   │   ├── @babel
-│   │   ├── @esbuild
-│   │   ├── @eslint
-│   │   ├── @eslint-community
-│   │   ├── @humanfs
-│   │   ├── @humanwhocodes
-│   │   ├── @jridgewell
-│   │   ├── @rolldown
-│   │   ├── @rollup
-│   │   ├── @types
-│   │   ├── @vitejs
-│   │   ├── acorn
-│   │   ├── acorn-jsx
-│   │   ├── ajv
-│   │   ├── ansi-styles
-│   │   ├── argparse
-│   │   ├── asynckit
-│   │   ├── axios
-│   │   ├── balanced-match
-│   │   ├── baseline-browser-mapping
-│   │   ├── brace-expansion
-│   │   ├── browserslist
-│   │   ├── call-bind-apply-helpers
-│   │   ├── callsites
-│   │   ├── caniuse-lite
-│   │   ├── chalk
-│   │   ├── color-convert
-│   │   ├── color-name
-│   │   ├── combined-stream
-│   │   ├── concat-map
-│   │   ├── convert-source-map
-│   │   ├── cross-spawn
-│   │   ├── csstype
-│   │   ├── debug
-│   │   ├── deep-is
-│   │   ├── delayed-stream
-│   │   ├── dunder-proto
-│   │   ├── electron-to-chromium
-│   │   ├── es-define-property
-│   │   ├── es-errors
-│   │   ├── es-object-atoms
-│   │   ├── es-set-tostringtag
-│   │   ├── esbuild
-│   │   ├── escalade
-│   │   ├── escape-string-regexp
-│   │   ├── eslint
-│   │   ├── eslint-plugin-react-hooks
-│   │   ├── eslint-plugin-react-refresh
-│   │   ├── eslint-scope
-│   │   ├── eslint-visitor-keys
-│   │   ├── espree
-│   │   ├── esquery
-│   │   ├── esrecurse
-│   │   ├── estraverse
-│   │   ├── esutils
-│   │   ├── fast-deep-equal
-│   │   ├── fast-json-stable-stringify
-│   │   ├── fast-levenshtein
-│   │   ├── fdir
-│   │   ├── file-entry-cache
-│   │   ├── find-up
-│   │   ├── flat-cache
-│   │   ├── flatted
-│   │   ├── follow-redirects
-│   │   ├── form-data
-│   │   ├── fsevents
-│   │   ├── function-bind
-│   │   ├── gensync
-│   │   ├── get-intrinsic
-│   │   ├── get-proto
-│   │   ├── glob-parent
-│   │   ├── globals
-│   │   ├── gopd
-│   │   ├── has-flag
-│   │   ├── has-symbols
-│   │   ├── has-tostringtag
-│   │   ├── hasown
-│   │   ├── ignore
-│   │   ├── import-fresh
-│   │   ├── imurmurhash
-│   │   ├── is-extglob
-│   │   ├── is-glob
-│   │   ├── isexe
-│   │   ├── js-tokens
-│   │   ├── js-yaml
-│   │   ├── jsesc
-│   │   ├── json-buffer
-│   │   ├── json-schema-traverse
-│   │   ├── json-stable-stringify-without-jsonify
-│   │   ├── json5
-│   │   ├── keyv
-│   │   ├── levn
-│   │   ├── locate-path
-│   │   ├── lodash.merge
-│   │   ├── lru-cache
-│   │   ├── math-intrinsics
-│   │   ├── mime-db
-│   │   ├── mime-types
-│   │   ├── minimatch
-│   │   ├── ms
-│   │   ├── nanoid
-│   │   ├── natural-compare
-│   │   ├── node-releases
-│   │   ├── optionator
-│   │   ├── p-limit
-│   │   ├── p-locate
-│   │   ├── parent-module
-│   │   ├── path-exists
-│   │   ├── path-key
-│   │   ├── picocolors
-│   │   ├── picomatch
-│   │   ├── postcss
-│   │   ├── prelude-ls
-│   │   ├── proxy-from-env
-│   │   ├── punycode
-│   │   ├── react
-│   │   ├── react-dom
-│   │   ├── react-refresh
-│   │   ├── resolve-from
-│   │   ├── rollup
-│   │   ├── scheduler
-│   │   ├── semver
-│   │   ├── shebang-command
-│   │   ├── shebang-regex
-│   │   ├── source-map-js
-│   │   ├── strip-json-comments
-│   │   ├── supports-color
-│   │   ├── tinyglobby
-│   │   ├── type-check
-│   │   ├── update-browserslist-db
-│   │   ├── uri-js
-│   │   ├── vite
-│   │   ├── which
-│   │   ├── word-wrap
-│   │   ├── yallist
-│   │   └── yocto-queue
 │   ├── package-lock.json
 │   ├── package.json
 │   ├── public
@@ -475,4 +339,18 @@ jeffalbee@Jeffreys-MacBook-Air ai-assurance-quality-tool % tree -L 3
         ├── Dockerfile
         └── ingest.py
 
-204 directories, 271 files
+
+
+Component	Status	Notes
+Frontend UI	✅ Built	License logic, metrics, violations
+License API	✅ Built	Needs expiration logic
+Sidecar Agent	⚠️ Partial	Needs model connection and routing
+Kafka Init	✅ Built	Validate broker and topic setup
+MMS Consumer	⚠️ Partial	Needs real model integration
+Model Builder	✅ Built	Add registry/versioning
+Baseline Service	⚠️ Partial	Needs API exposure
+TIB Producer	⚠️ Partial	Confirm Kafka publishing
+Docker Compose	⚠️ Partial	Needs service validation
+Helm Charts	❌ Placeholder	Needs full chart
+Grafana	❌ Empty	Add dashboards and metrics
+Inject Script	✅ Built	Useful for testing

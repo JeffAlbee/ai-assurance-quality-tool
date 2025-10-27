@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import Column, Integer, String, Float, DateTime, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import time
 import os
@@ -74,15 +74,16 @@ class ViolationPayload(BaseModel):
     user: str
 
 class LicenseStatus(BaseModel):
-    status: str       # "active" or "inactive"
-    txid: str         # mock or real TXID
+    status: str
+    txid: str
     checked_at: datetime
+    expires_at: datetime
+    level: str
 
 # ─────────────────────────────────────────────────────────────
 # ✅ Routes
 # ─────────────────────────────────────────────────────────────
 
-# 🔹 POST: Log assurance label to file
 @app.post("/v1/labels")
 async def receive_label(request: Request):
     try:
@@ -94,7 +95,6 @@ async def receive_label(request: Request):
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
-# 🔹 POST: Log violation to database
 @app.post("/v1/violations")
 def log_violation(payload: ViolationPayload, db: Session = Depends(get_db)):
     violation = Violation(**payload.dict())
@@ -102,7 +102,6 @@ def log_violation(payload: ViolationPayload, db: Session = Depends(get_db)):
     db.commit()
     return { "status": "logged", "id": violation.id }
 
-# 🔹 GET: Retrieve violations by model_id
 @app.get("/v1/violations")
 def get_violations(model_id: str, db: Session = Depends(get_db)):
     violations = db.query(Violation).filter(Violation.model_id == model_id).order_by(Violation.timestamp.desc()).all()
@@ -121,7 +120,6 @@ def get_violations(model_id: str, db: Session = Depends(get_db)):
         for v in violations
     ]
 
-# 🔹 GET: License Status Check
 @app.get("/v1/license/status", response_model=LicenseStatus)
 def get_license_status():
     return LicenseStatus(
@@ -131,3 +129,7 @@ def get_license_status():
         checked_at=datetime.utcnow(),
         expires_at=datetime.utcnow() + timedelta(days=30)
     )
+
+# 🔹 Mount Redis-backed history route
+from history import router as history_router
+app.include_router(history_router)
