@@ -1,0 +1,9 @@
+{
+  "models": [
+    {
+      "model_id": "flood-risk-predictor",
+      "endpoint": "http://localhost:8000",
+      "export_path": "/mnt/assurance_exports"
+    }
+  ]
+}

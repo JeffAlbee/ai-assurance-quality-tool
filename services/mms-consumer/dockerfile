@@ -1,14 +1,14 @@
-# Use lightweight Python base
 FROM python:3.10-slim
 
-# Set working directory
 WORKDIR /app
 
-# Copy all source files
-COPY . .
+# Copy mms-consumer code
+COPY mms-consumer/ .
+
+# Copy model-builder code
+COPY model-builder/ ./model-builder
 
 # Install dependencies
-RUN pip install --no-cache-dir kafka-python redis
+RUN pip install redis numpy
 
-# Run the consumer
-CMD ["python", "consumer.py"]
+CMD ["python", "scheduler.py"]

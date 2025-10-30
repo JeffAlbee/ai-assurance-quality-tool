@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import MetricDashboard from "./MetricDashboard";
-import ViolationDashboard from "./ViolationDashboard";
 import ModelConfigForm from "./ModelConfigForm";
-import HistoricalExports from "./HistoricalExports";
+import BaselineTolerances from "./BaselineTolerances";
+import Historian from "./Historian"; // ✅ Unified tab
 
 function App() {
   const [activeTab, setActiveTab] = useState("grafanaMetrics");
@@ -49,7 +49,7 @@ function App() {
               <iframe
                 src="http://localhost:3000/goto/cf2c91agdo2kgf?orgId=1"
                 width="100%"
-                height="600"
+                height="750"
                 frameBorder="0"
                 title="Grafana Assurance Metrics"
               />
@@ -75,27 +75,22 @@ function App() {
             </section>
           </main>
         );
-      case "violations":
+      case "historian":
         return (
           <main className="px-4 py-6">
             <LicenseHeader />
-            <ViolationDashboard />
+            <h2 className="text-xl font-semibold mb-4">Historian Logs</h2>
+            <div className="bg-white p-4 rounded shadow">
+              {/* Defensive rendering */}
+              {Historian ? <Historian /> : <p className="text-sm text-red-600">Historian component failed to load.</p>}
+            </div>
           </main>
         );
       case "baseline":
         return (
           <main className="px-4 py-6">
             <LicenseHeader />
-            <h2 className="text-xl font-semibold mb-4">Baseline & Tolerances</h2>
-            <div className="rounded border bg-white p-4 shadow">
-              <iframe
-                src="http://localhost:3000/d/c017a79c-896b-470d-a7d1-1c30ec04dab8?orgId=1&from=now-6h&to=now"
-                width="100%"
-                height="600"
-                frameBorder="0"
-                title="Grafana Baseline & Tolerances"
-              />
-            </div>
+            <BaselineTolerances />
           </main>
         );
       case "config":
@@ -104,14 +99,6 @@ function App() {
             <LicenseHeader />
             <h2 className="text-xl font-semibold mb-4">Model Configuration</h2>
             <ModelConfigForm />
-          </main>
-        );
-      case "exports":
-        return (
-          <main className="px-4 py-6">
-            <LicenseHeader />
-            <h2 className="text-xl font-semibold mb-4">Historical Exports</h2>
-            <HistoricalExports modelId="flood-risk-predictor" />
           </main>
         );
       case "license":
@@ -151,10 +138,9 @@ function App() {
   const tabs = [
     { key: "grafanaMetrics", label: "Real-Time Metrics" },
     { key: "metrics", label: "Assurance Label" },
-    { key: "violations", label: "Violations" },
+    { key: "historian", label: "Historian" },
     { key: "baseline", label: "Baseline & Tolerances" },
     { key: "config", label: "Model Configuration" },
-    { key: "exports", label: "Historical Exports" },
     { key: "license", label: "License" },
   ];
 

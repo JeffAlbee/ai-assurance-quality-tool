@@ -1,8 +1,5 @@
-version: "3.9"
-
 services:
 
-  # 🧭 Zookeeper for Kafka coordination
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
@@ -14,7 +11,6 @@ services:
     networks:
       - ai-assurance-net
 
-  # 📡 Kafka broker for telemetry ingestion
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka
@@ -40,9 +36,10 @@ services:
     networks:
       - ai-assurance-net
 
-  # 🧱 Kafka topic initializer
   kafka-init:
-    build: ./services/kafka-init
+    build:
+      context: ./services/kafka-init
+      dockerfile: Dockerfile
     container_name: kafka-init
     depends_on:
       - kafka
@@ -50,10 +47,10 @@ services:
     networks:
       - ai-assurance-net
 
-  # 🧠 MMS consumer (reads and processes Kafka messages)
   mms-consumer:
     build:
-      context: ./services/mms-consumer
+      context: ./services
+      dockerfile: mms-consumer/dockerfile
     container_name: mms-consumer
     depends_on:
       kafka:
@@ -64,22 +61,37 @@ services:
     networks:
       - ai-assurance-net
 
-  # 🌐 MMS API (serves /metrics for Grafana and dashboards)
+  scheduler:
+    build:
+      context: ./services
+      dockerfile: mms-consumer/dockerfile
+    container_name: scheduler
+    command: python scheduler.py
+    depends_on:
+      redis:
+        condition: service_started
+    restart: on-failure
+    networks:
+      - ai-assurance-net
+
   mms-api:
     build:
-      context: ./services/mms-api
+      context: ./services/mms_api
+      dockerfile: Dockerfile
     container_name: mms-api
     ports:
       - "9100:9100"
     depends_on:
       - redis
+      - postgres
     restart: on-failure
+    environment:
+      DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/assurance_db
     networks:
       - ai-assurance-net
 
-  # 🗄️ Redis for metric sharing
   redis:
-    image: redis:7.2
+    image: redis/redis-stack-server:latest
     container_name: redis
     ports:
       - "6379:6379"
@@ -89,9 +101,10 @@ services:
     networks:
       - ai-assurance-net
 
-  # 🌐 TIB Producer API (receives telemetry from ASA)
   tib-producer-api:
-    build: ./services/tib-producer-api
+    build:
+      context: ./services/tib-producer-api
+      dockerfile: Dockerfile
     container_name: tib-producer-api
     ports:
       - "8002:8000"
@@ -106,7 +119,6 @@ services:
     networks:
       - ai-assurance-net
 
-  # 🗄️ PostgreSQL for baseline storage
   postgres:
     image: postgres:15
     container_name: postgres
@@ -122,9 +134,10 @@ services:
     networks:
       - ai-assurance-net
 
-  # 📊 Quality Baseline Service (QBS)
   baseline-service:
-    build: ./services/baseline
+    build:
+      context: ./services/baseline
+      dockerfile: Dockerfile
     container_name: baseline-service
     ports:
       - "8001:8000"
@@ -132,13 +145,14 @@ services:
     depends_on:
       - postgres
     environment:
-      DATABASE_URL: postgresql://postgres:yourpassword@postgres/assurance_db
+      DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/assurance_db
     networks:
       - ai-assurance-net
 
-  # 🛰️ Assurance Sidecar Agent (ASA)
   sidecar-agent:
-    build: ./services/sidecar-agent
+    build:
+      context: ./services/sidecar-agent
+      dockerfile: Dockerfile
     container_name: sidecar-agent
     depends_on:
       - tib-producer-api
@@ -148,9 +162,10 @@ services:
     networks:
       - ai-assurance-net
 
-  # 🧾 Assurance Service (AS)
   assurance-service:
-    build: ./services/assurance-service
+    build:
+      context: ./services/assurance-service
+      dockerfile: Dockerfile
     container_name: assurance-service
     ports:
       - "8000:8000"
@@ -162,9 +177,8 @@ services:
     networks:
       - ai-assurance-net
 
-  # 📊 Grafana for dashboarding and observability
   grafana:
-    image: grafana/grafana:10.2.3
+    image: grafana/grafana:latest
     container_name: grafana
     ports:
       - "3000:3000"
@@ -173,21 +187,21 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_SECURITY_ALLOW_EMBEDDING=true
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=http://localhost:3000
-      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ALLOW_EMBEDDING: true
+      GF_AUTH_ANONYMOUS_ENABLED: true
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_SERVER_ROOT_URL: http://localhost:3000
+      GF_SERVER_SERVE_FROM_SUB_PATH: true
     networks:
       - ai-assurance-net
 
-  # 🔍 Model Builder Service (serves predictions + metrics)
   model-builder:
     build:
       context: ./services/model-builder
+      dockerfile: Dockerfile
     container_name: model-builder
     volumes:
       - ./logs:/app/logs

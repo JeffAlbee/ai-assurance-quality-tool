@@ -3,8 +3,9 @@ import axios from "axios";
 
 function ModelConfigForm() {
   const [activeModels, setActiveModels] = useState([]);
-  const [modelName, setModelName] = useState("");
+  const [modelId, setModelId] = useState("");
   const [endpoint, setEndpoint] = useState("http://localhost:5000");
+  const [exportPath, setExportPath] = useState("/mnt/assurance_exports");
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -34,8 +35,9 @@ function ModelConfigForm() {
   const saveConfig = async () => {
     try {
       await axios.post("/v1/model/config", {
-        model_name: modelName,
-        endpoint_url: endpoint,
+        model_id: modelId,
+        endpoint: endpoint,
+        export_path: exportPath,
       });
       setStatus("✅ Configuration saved");
     } catch {
@@ -60,30 +62,45 @@ function ModelConfigForm() {
 
       <section>
         <h2 className="text-xl font-semibold mb-2">Connect to Model</h2>
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">Model Name</label>
-          <input
-            type="text"
-            value={modelName}
-            onChange={(e) => setModelName(e.target.value)}
-            list="model-options"
-            className="border rounded px-2 py-1 w-full"
-            placeholder="Enter or select model name"
-          />
-          <datalist id="model-options">
-            {activeModels.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium">Model ID</label>
+            <input
+              type="text"
+              value={modelId}
+              onChange={(e) => setModelId(e.target.value)}
+              list="model-options"
+              className="border rounded px-2 py-1 w-full"
+              placeholder="Enter or select model ID"
+            />
+            <datalist id="model-options">
+              {activeModels.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+          </div>
 
-          <label className="block text-sm font-medium mt-4"> Endpoint URL</label>
-          <input
-            type="text"
-            value={endpoint}
-            onChange={(e) => setEndpoint(e.target.value)}
-            className="border rounded px-2 py-1 w-full"
-            placeholder="http://localhost:5000"
-          />
+          <div>
+            <label className="block text-sm font-medium">Endpoint URL</label>
+            <input
+              type="text"
+              value={endpoint}
+              onChange={(e) => setEndpoint(e.target.value)}
+              className="border rounded px-2 py-1 w-full"
+              placeholder="http://localhost:5000"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Export Path</label>
+            <input
+              type="text"
+              value={exportPath}
+              onChange={(e) => setExportPath(e.target.value)}
+              className="border rounded px-2 py-1 w-full"
+              placeholder="/mnt/assurance_exports"
+            />
+          </div>
 
           <div className="flex gap-4 mt-4">
             <button
