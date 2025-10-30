@@ -1,7 +1,7 @@
 import json
 import os
 from datetime import datetime
-from utils.redis import get_redis_client
+from mms_api.utils.redis import get_redis_client
 
 def export_model_history(model_id: str, export_dir: str) -> str:
     r = get_redis_client()

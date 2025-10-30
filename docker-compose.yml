@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
 
   zookeeper:
@@ -164,8 +166,8 @@ services:
 
   assurance-service:
     build:
-      context: ./services/assurance-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: assurance-service/Dockerfile
     container_name: assurance-service
     ports:
       - "8000:8000"

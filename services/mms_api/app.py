@@ -13,13 +13,13 @@ from datetime import datetime
 # ─────────────────────────────────────────────────────────────
 # ✅ Route Imports (simplified for container context)
 # ─────────────────────────────────────────────────────────────
-from routes.config import router as config_router
-from routes.exports import router as exports_router
-from routes.tolerances import router as tolerances_router
-from routes.violations import router as violations_router
-from routes.labels import router as labels_router
-from routes.license import router as license_router
-from routes.history import router as history_router
+from mms_api.routes.config import router as config_router
+from mms_api.routes.exports import router as exports_router
+from mms_api.routes.tolerances import router as tolerances_router
+from mms_api.routes.violations import router as violations_router
+from mms_api.routes.labels import router as labels_router
+from mms_api.routes.license import router as license_router
+from mms_api.routes.history import router as history_router
 
 # ─────────────────────────────────────────────────────────────
 # ✅ FastAPI Initialization

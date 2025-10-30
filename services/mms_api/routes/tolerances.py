@@ -10,7 +10,6 @@ router = APIRouter()
 
 print("✅ /ping route defined")
 
-
 # ─────────────────────────────────────────────────────────────
 # ✅ Health Check Route (registered first)
 # ─────────────────────────────────────────────────────────────

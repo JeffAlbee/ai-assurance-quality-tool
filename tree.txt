@@ -1,10 +1,81 @@
+🧠 AI Assurance Quality Stack — System Overview
+
+🔧 Core Components
+Layer	Component	Purpose
+Frontend	React + Vite Dashboard	UI for stakeholders to view metrics, violations, and configure models
+Backend API	FastAPI	Serves /health, /v1/metrics, /v1/models/active, /v1/model/config
+Consumer	mms-consumer/consumer.py	Kafka consumer that ingests telemetry, computes metrics, writes to Redis
+Storage	Redis	Stores latest and historical metrics keyed by model ID
+Monitoring	Grafana	Visualizes metrics from Redis, MMS API, and history API
+Messaging	Kafka	Streams live telemetry from models to consumer
+
+📦 Data Flow Summary
+Model sends telemetry → Kafka
+Kafka → consumer.py → Redis
+    Extracts model_id, txid_hash
+    Computes metrics
+    Writes:
+        metrics:{model_id} (latest)
+        metrics:{model_id}:{timestamp} (historical)
+        
+Grafana pulls from Redis + MMS API
+    Redis: live metrics
+    MMS API: composite scores, assurance labels
+    history.api: violation logs
+
+React dashboard embeds Grafana panels + shows latest labels
+
+🧪 Key Redis Keys
+    metrics:{model_id} → latest snapshot
+    metrics:{model_id}:{timestamp} → historical snapshot
+    Example:
+        metrics:flood-risk-predictor
+        metrics:flood-risk-predictor:2025-10-27T16_22_57Z
+
+🖥️ React Dashboard Tabs
+Tab Name	Purpose
+Real-Time Metrics	Embedded Grafana panel for live metrics
+Assurance Label	Shows latest label + snapshot metrics via MetricDashboard
+Violations	Violation breakdown via ViolationDashboard
+Baseline & Tolerances	Embedded Grafana panel for thresholds
+Model Configuration	Lists active models, connects to endpoints, saves config
+License	Shows license status and upgrade options
+
+🔌 FastAPI Endpoints
+Endpoint	Purpose
+/health	Health check for model endpoint
+/v1/models/active	Lists active models
+/v1/model/config	Saves model name + endpoint config
+/v1/metrics/latest	(planned) Returns latest metrics
+/v1/violations	(planned) Returns violation logs
+
+
 jeffalbee@Jeffreys-MacBook-Air ai-assurance-quality-tool % tree -L 3
+
+
+I have a history.api, MMS Metrics and Redis data source configured in Grafana.
+
+My Models and Payload is as follows: 
+jeffalbee@Jeffreys-MacBook-Air ai-assurance-quality-tool % redis-cli KEYS "metrics:*"
+1) "metrics:flood-risk-predictor"
+2) "metrics:flood-risk-predictor:2025-10-27T16_22_57Z"
+jeffalbee@Jeffreys-MacBook-Air ai-assurance-quality-tool % redis-cli GET "metrics:flood-risk-predictor"
+"{\"timestamp\": \"2025-10-27T16_22_57Z\", \"metrics\": {\"accuracy\": 0.92, \"rmse\": 1.2, \"feature_drift\": 0.03, \"domain_violation_count\": 2, \"failure_rate\": 0.01, \"watts_per_inference\": 42.0, \"confidence_floor\": 0.9, \"confidence_variance\": 0.04}}"
+jeffalbee@Jeffreys-MacBook-Air ai-assurance-quality-tool % 
+
+My Folder & File Structure is this: 
 .
 ├── assurance-dashboard
 │   ├── eslint.config.js
 │   ├── index.html
 │   ├── node_modules
-│   ├── package-lock.json
+│   │   ├── @babel
+│   │   ├── @esbuild
+│   │   ├── @eslint
+│   │   ├── @eslint-community
+│   │   ├── @humanfs
+│   │   ├── @humanwhocodes
+│   │   ├── package-lock.json
 │   ├── package.json
 │   ├── public
 │   │   ├── AIA_BB_flavicon.png
@@ -20,6 +91,7 @@ jeffalbee@Jeffreys-MacBook-Air ai-assurance-quality-tool % tree -L 3
 │   │   ├── LabelTable.jsx
 │   │   ├── main.jsx
 │   │   ├── MetricDashboard.jsx
+│   │   ├── ModelConfigForm.jsx
 │   │   └── ViolationDashboard.jsx
 │   ├── tailwind.config.js
 │   └── vite.config.js
@@ -30,6 +102,8 @@ jeffalbee@Jeffreys-MacBook-Air ai-assurance-quality-tool % tree -L 3
 ├── helm
 ├── init-scripts
 ├── inject_label.py
+├── logs
+│   └── inference.log
 ├── mms-env
 │   ├── bin
 │   │   ├── activate
@@ -63,34 +137,11 @@ jeffalbee@Jeffreys-MacBook-Air ai-assurance-quality-tool % tree -L 3
 │   │   └── stream.js
 │   ├── axios
 │   │   ├── CHANGELOG.md
-│   │   ├── dist
-│   │   ├── index.d.cts
-│   │   ├── index.d.ts
-│   │   ├── index.js
-│   │   ├── lib
-│   │   ├── LICENSE
-│   │   ├── MIGRATION_GUIDE.md
-│   │   ├── package.json
-│   │   └── README.md
+
 │   ├── call-bind-apply-helpers
 │   │   ├── actualApply.d.ts
 │   │   ├── actualApply.js
-│   │   ├── applyBind.d.ts
-│   │   ├── applyBind.js
-│   │   ├── CHANGELOG.md
-│   │   ├── functionApply.d.ts
-│   │   ├── functionApply.js
-│   │   ├── functionCall.d.ts
-│   │   ├── functionCall.js
-│   │   ├── index.d.ts
-│   │   ├── index.js
-│   │   ├── LICENSE
-│   │   ├── package.json
-│   │   ├── README.md
-│   │   ├── reflectApply.d.ts
-│   │   ├── reflectApply.js
-│   │   ├── test
-│   │   └── tsconfig.json
+
 │   ├── combined-stream
 │   │   ├── lib
 │   │   ├── License
@@ -126,39 +177,12 @@ jeffalbee@Jeffreys-MacBook-Air ai-assurance-quality-tool % tree -L 3
 │   ├── es-errors
 │   │   ├── CHANGELOG.md
 │   │   ├── eval.d.ts
-│   │   ├── eval.js
-│   │   ├── index.d.ts
-│   │   ├── index.js
-│   │   ├── LICENSE
-│   │   ├── package.json
-│   │   ├── range.d.ts
-│   │   ├── range.js
-│   │   ├── README.md
-│   │   ├── ref.d.ts
-│   │   ├── ref.js
-│   │   ├── syntax.d.ts
-│   │   ├── syntax.js
-│   │   ├── test
-│   │   ├── tsconfig.json
-│   │   ├── type.d.ts
-│   │   ├── type.js
-│   │   ├── uri.d.ts
-│   │   └── uri.js
+
 │   ├── es-object-atoms
 │   │   ├── CHANGELOG.md
 │   │   ├── index.d.ts
 │   │   ├── index.js
-│   │   ├── isObject.d.ts
-│   │   ├── isObject.js
-│   │   ├── LICENSE
-│   │   ├── package.json
-│   │   ├── README.md
-│   │   ├── RequireObjectCoercible.d.ts
-│   │   ├── RequireObjectCoercible.js
-│   │   ├── test
-│   │   ├── ToObject.d.ts
-│   │   ├── ToObject.js
-│   │   └── tsconfig.json
+
 │   ├── es-set-tostringtag
 │   │   ├── CHANGELOG.md
 │   │   ├── index.d.ts
@@ -254,36 +278,7 @@ jeffalbee@Jeffreys-MacBook-Air ai-assurance-quality-tool % tree -L 3
 │   │   └── tsconfig.json
 │   ├── math-intrinsics
 │   │   ├── abs.d.ts
-│   │   ├── abs.js
-│   │   ├── CHANGELOG.md
-│   │   ├── constants
-│   │   ├── floor.d.ts
-│   │   ├── floor.js
-│   │   ├── isFinite.d.ts
-│   │   ├── isFinite.js
-│   │   ├── isInteger.d.ts
-│   │   ├── isInteger.js
-│   │   ├── isNaN.d.ts
-│   │   ├── isNaN.js
-│   │   ├── isNegativeZero.d.ts
-│   │   ├── isNegativeZero.js
-│   │   ├── LICENSE
-│   │   ├── max.d.ts
-│   │   ├── max.js
-│   │   ├── min.d.ts
-│   │   ├── min.js
-│   │   ├── mod.d.ts
-│   │   ├── mod.js
-│   │   ├── package.json
-│   │   ├── pow.d.ts
-│   │   ├── pow.js
-│   │   ├── README.md
-│   │   ├── round.d.ts
-│   │   ├── round.js
-│   │   ├── sign.d.ts
-│   │   ├── sign.js
-│   │   ├── test
-│   │   └── tsconfig.json
+
 │   ├── mime-db
 │   │   ├── db.json
 │   │   ├── HISTORY.md
@@ -305,52 +300,71 @@ jeffalbee@Jeffreys-MacBook-Air ai-assurance-quality-tool % tree -L 3
 │       └── test.js
 ├── package-lock.json
 ├── package.json
-└── services
-    ├── assurance-service
-    │   ├── Dockerfile
-    │   ├── reporter.py
-    │   └── requirements.txt
-    ├── baseline
-    │   ├── baseline.py
-    │   ├── database.py
-    │   ├── dockerfile
-    │   ├── models.py
-    │   └── requirements.txt
-    ├── kafka-init
-    │   ├── create-topics.sh
-    │   └── dockerfile
-    ├── mms-consumer
-    │   ├── consumer.py
-    │   ├── dockerfile
-    │   ├── requirements.txt
-    │   ├── sample_payload.json
-    │   └── send_sample.py
-    ├── model-builder
-    │   ├── dockerfile
-    │   ├── FloodRiskModel.pkl
-    │   ├── generate_dummy_data.py
-    │   ├── train_flood_model.py
-    │   └── training_data.csv
-    ├── sidecar-agent
-    │   ├── agent.py
-    │   ├── Dockerfile
-    │   └── requirements.txt
-    └── tib-producer-api
-        ├── Dockerfile
-        └── ingest.py
+├── services
+│   ├── assurance-service
+│   │   ├── Dockerfile
+│   │   ├── history.py
+│   │   ├── reporter.py
+│   │   └── requirements.txt
+│   ├── baseline
+│   │   ├── baseline.py
+│   │   ├── database.py
+│   │   ├── dockerfile
+│   │   ├── models.py
+│   │   └── requirements.txt
+│   ├── kafka-init
+│   │   ├── create-topics.sh
+│   │   └── dockerfile
+│   ├── mms-api
+│   │   ├── app.py
+│   │   └── dockerfile
+│   ├── mms-consumer
+│   │   ├── consumer.py
+│   │   ├── dockerfile
+│   │   ├── requirements.txt
+│   │   ├── sample_payload.json
+│   │   ├── send_sample.py
+│   │   └── wait_for_kafka.py
+│   ├── model-builder
+│   │   ├── __pycache__
+│   │   ├── app.py
+│   │   ├── dockerfile
+│   │   ├── FloodRiskModel.pkl
+│   │   ├── generate_dummy_data.py
+│   │   ├── logs
+│   │   ├── metrics.py
+│   │   ├── model.py
+│   │   ├── requirements.txt
+│   │   ├── train_model.py
+│   │   └── training_data.csv
+│   ├── sidecar-agent
+│   │   ├── agent.py
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   └── tib-producer-api
+│       ├── Dockerfile
+│       └── ingest.py
+├── tree.txt
+└── venv
+    ├── bin
+    │   ├── activate
+    │   ├── activate.csh
+    │   ├── activate.fish
+    │   ├── Activate.ps1
+    │   ├── dotenv
+    │   ├── fastapi
+    │   ├── pip
+    │   ├── pip3
+    │   ├── pip3.14
+    │   ├── python -> python3.14
+    │   ├── python3 -> python3.14
+    │   ├── python3.14 -> /usr/local/opt/python@3.14/bin/python3.14
+    │   ├── 𝜋thon -> python3.14
+    │   └── uvicorn
+    ├── include
+    ├── lib
+    │   └── python3.14
+    └── pyvenv.cfg
 
 
 
-Component	Status	Notes
-Frontend UI	✅ Built	License logic, metrics, violations
-License API	✅ Built	Needs expiration logic
-Sidecar Agent	⚠️ Partial	Needs model connection and routing
-Kafka Init	✅ Built	Validate broker and topic setup
-MMS Consumer	⚠️ Partial	Needs real model integration
-Model Builder	✅ Built	Add registry/versioning
-Baseline Service	⚠️ Partial	Needs API exposure
-TIB Producer	⚠️ Partial	Confirm Kafka publishing
-Docker Compose	⚠️ Partial	Needs service validation
-Helm Charts	❌ Placeholder	Needs full chart
-Grafana	❌ Empty	Add dashboards and metrics
-Inject Script	✅ Built	Useful for testing

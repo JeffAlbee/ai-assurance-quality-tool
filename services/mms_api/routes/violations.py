@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime
-from db import get_db, Violation # move models to a shared db.py
+from mms_api.db import get_db, Violation # move models to a shared db.py
 
 router = APIRouter()
 
