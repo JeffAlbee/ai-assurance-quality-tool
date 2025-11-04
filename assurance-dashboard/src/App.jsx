@@ -3,7 +3,7 @@ import axios from "axios";
 import MetricDashboard from "./MetricDashboard";
 import ModelConfigForm from "./ModelConfigForm";
 import BaselineTolerances from "./BaselineTolerances";
-import Historian from "./Historian"; // ✅ Unified tab
+import Historian from "./Historian";
 
 function App() {
   const [activeTab, setActiveTab] = useState("grafanaMetrics");
@@ -23,17 +23,27 @@ function App() {
     if (!licenseInfo) return null;
     const { level = "basic", status } = licenseInfo;
     const isActive = status === "active";
-    const statusStyle = isActive ? "text-green-600 font-bold" : "text-red-600 font-bold";
     const statusText = isActive ? "Active" : "Expired";
+    const statusStyle = isActive ? "text-green-600 font-bold" : "text-red-600 font-bold";
 
     return (
-      <div className="mb-4 text-sm">
-        <p className="text-lg font-semibold">
-          <strong>License Level:</strong> {level}
-        </p>
-        <p className={`text-lg font-semibold ${statusStyle}`}>
-          <strong>License Status:</strong> {statusText}
-        </p>
+      <div className="mb-4 text-sm flex justify-between items-center bg-yellow-50 border border-yellow-200 rounded px-4 py-3">
+        <div>
+          <p className="text-lg font-semibold">
+            <strong>License Level:</strong> {level}
+          </p>
+          <p className={`text-lg font-semibold ${statusStyle}`}>
+            <strong>License Status:</strong> {statusText}
+          </p>
+        </div>
+        {!isActive && (
+          <button
+            onClick={() => setActiveTab("license")}
+            className="px-3 py-1 bg-red-600 text-white rounded text-sm"
+          >
+            Renew License
+          </button>
+        )}
       </div>
     );
   };
@@ -81,7 +91,6 @@ function App() {
             <LicenseHeader />
             <h2 className="text-xl font-semibold mb-4">Historian Logs</h2>
             <div className="bg-white p-4 rounded shadow">
-              {/* Defensive rendering */}
               {Historian ? <Historian /> : <p className="text-sm text-red-600">Historian component failed to load.</p>}
             </div>
           </main>
