@@ -1,14 +1,20 @@
 FROM python:3.10-slim
 
+# Set working directory
 WORKDIR /app
 
-# Copy mms-consumer code
-COPY mms-consumer/ .
+# Copy mms-consumer source code
+COPY services/mms-consumer/ ./
 
-# Copy model-builder code
-COPY model-builder/ ./model-builder
+# Copy and install model-builder as a local package
+COPY services/model-builder/ /modelbuilder
+RUN pip install /modelbuilder
 
-# Install dependencies
-RUN pip install redis numpy
+# Copy model config
+COPY services/mms_api/mms_api/model_config.json ./model_config.json
 
+# Install mms-consumer dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Default command
 CMD ["python", "scheduler.py"]

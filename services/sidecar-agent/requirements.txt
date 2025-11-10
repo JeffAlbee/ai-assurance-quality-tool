@@ -3,4 +3,11 @@ uvicorn==0.29.0
 kafka-python==2.0.2
 pydantic==2.5.2
 requests
+pandas
+numpy
+scikit-learn
+joblib
+sqlalchemy
+requests
+psycopg2-binary
 

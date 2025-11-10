@@ -2,12 +2,18 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
+# Install dependencies
 COPY assurance-service/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY mms_api/ ./mms_api/
+# ✅ Copy the ASGI app
+COPY mms_api/mms_api /app/mms_api
 
-# 👇 Add this line to fix import resolution
+# ✅ Copy historian.py directly into /app
+COPY mms-consumer/historian.py /app/historian.py
+
+# ✅ Ensure Python can resolve mms_api and historian
 ENV PYTHONPATH=/app
 
+# ✅ Launch the ASGI app
 CMD ["uvicorn", "mms_api.app:app", "--host", "0.0.0.0", "--port", "8000"]

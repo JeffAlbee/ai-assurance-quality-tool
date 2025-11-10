@@ -1,3 +1,10 @@
 kafka-python==2.0.2
 scikit-learn==1.2.2
 requests
+redis
+pandas
+numpy
+pydantic
+python-dotenv
+sqlalchemy>=1.4
+psycopg2-binary

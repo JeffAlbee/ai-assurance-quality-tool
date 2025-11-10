@@ -8,17 +8,13 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Copy dependency list and install Python packages
-COPY requirements.txt .
+COPY services/sidecar-agent/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt || true
 
-# Ensure core packages are installed
-RUN pip install --no-cache-dir \
-    requests \
-    kafka-python \
-    pydantic
 
-# Copy application code
-COPY . .
+# Copy only the relevant sidecar-agent code
+COPY services/sidecar-agent/evaluate_model.py /app/evaluate_model.py
+COPY services/mms_api/mms_api /app/mms_api
 
 # Run the Sidecar agent
-CMD ["python", "agent.py"]
+CMD ["python", "evaluate_model.py"]

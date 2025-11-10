@@ -41,18 +41,20 @@ def safe_deserializer(m):
         return {}
 
 # ─────────────────────────────────────────────────────────────
-# ✅ Metric Computation Logic
+# ✅ Extract Metrics from Payload
 # ─────────────────────────────────────────────────────────────
-def compute_metrics(payload):
+def extract_metrics(payload):
+    metrics = payload.get("metrics", {})
     return {
-        "accuracy": 0.92,
-        "rmse": 1.2,
-        "feature_drift": payload.get("feature_drift", 0.03),
-        "domain_violation_count": payload.get("domain_violation_count", 2),
-        "failure_rate": 0.01,
-        "watts_per_inference": payload.get("system_power_w", 0.0),
-        "confidence_floor": payload.get("response_payload", {}).get("confidence", 0.0),
-        "confidence_variance": 0.04
+        "accuracy": metrics.get("accuracy", 0.0),
+        "f1_score": metrics.get("f1_score", 0.0),
+        "confidence_variance": metrics.get("confidence_variance", 0.0),
+        "rmse": metrics.get("rmse", None),
+        "feature_drift": metrics.get("feature_drift", None),
+        "domain_violation_count": metrics.get("domain_violation_count", None),
+        "failure_rate": metrics.get("model_failure_rate", None),
+        "watts_per_inference": payload.get("system_power_w", None),
+        "confidence_floor": metrics.get("confidence_floor", None)
     }
 
 # ─────────────────────────────────────────────────────────────
@@ -84,13 +86,12 @@ def main():
                 logger.warning("[MMS] ⚠️ Skipping empty or invalid payload")
                 continue
 
-
             model_id = payload.get("model_id", "unknown-model")
             txid = payload.get("txid_hash", "no-txid")
 
             logger.info(f"[MMS] 📥 Received telemetry | TXID={txid} | Model={model_id}")
 
-            metrics = compute_metrics(payload)
+            metrics = extract_metrics(payload)
 
             timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H_%M_%SZ")
             redis_key_latest = f"metrics:{model_id}"
@@ -101,13 +102,15 @@ def main():
                 "metrics": metrics
             })
 
+            # ✅ Store full metric payload
             r.set(redis_key_latest, redis_value)
             r.set(redis_key_historical, redis_value)
 
-            latest_exists = r.exists(redis_key_latest)
-            historical_exists = r.exists(redis_key_historical)
+            # ✅ Store accuracy and F1 separately for Grafana or alerting
+            r.set(f"{redis_key_latest}:accuracy", metrics["accuracy"])
+            r.set(f"{redis_key_latest}:f1_score", metrics["f1_score"])
 
-            logger.info(f"[MMS] ✅ Redis write complete | Latest: {latest_exists} | Historical: {historical_exists}")
+            logger.info(f"[MMS] ✅ Redis write complete | Latest: {r.exists(redis_key_latest)} | Historical: {r.exists(redis_key_historical)}")
             logger.info(f"[MMS] 📦 Keys stored: {redis_key_latest}, {redis_key_historical}")
         except Exception as e:
             logger.error(f"[MMS] ❌ Error processing message: {e}")

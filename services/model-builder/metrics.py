@@ -1,7 +1,21 @@
 import numpy as np
+from typing import List, Dict, Any
 
-def compute_metrics(model, recent_data):
-    features = recent_data["features"]
+def compute_metrics(model, recent_data: Dict[str, Any]) -> Dict[str, float]:
+    """
+    Compute evaluation metrics for a given model and recent input data.
+
+    Args:
+        model: A model object with a .predict(features) method.
+        recent_data: A dictionary containing:
+            - "features": List of input feature vectors
+            - "labels": Ground truth labels (0 or 1)
+            - Optional: latency, failures, watts, confidence_floor, confidence_variance
+
+    Returns:
+        A dictionary of computed metrics.
+    """
+    features: List[List[float]] = recent_data["features"]
     labels = np.array(recent_data["labels"])
 
     # Run predictions
@@ -33,9 +47,14 @@ def compute_metrics(model, recent_data):
         "confidence_variance": recent_data.get("confidence_variance", 0.04)
     }
 
-# Stub functions for now
-def calculate_feature_drift(features):
-    return 0.02  # placeholder
+# ─────────────────────────────────────────────────────────────
+# 🔧 Stub Functions (to be replaced with real logic)
+# ─────────────────────────────────────────────────────────────
 
-def check_domain_violations(predictions):
-    return 0  # placeholder
+def calculate_feature_drift(features: List[List[float]]) -> float:
+    """Placeholder for feature drift detection."""
+    return 0.02
+
+def check_domain_violations(predictions: List[Dict[str, Any]]) -> int:
+    """Placeholder for domain-specific rule violations."""
+    return 0
