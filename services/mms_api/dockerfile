@@ -1,9 +1,27 @@
 FROM python:3.10-slim
 
+# Set working directory
 WORKDIR /app
 
-COPY . .
+# Copy mms_api source into /app
+COPY services/mms_api/ /app/
 
-RUN pip install fastapi uvicorn redis sqlalchemy psycopg2-binary pydantic
+# Copy orchestration module into /app/orchestration
+COPY services/orchestration/ /app/orchestration/
 
+# Ensure all folders are treated as packages
+RUN touch /app/__init__.py && \
+    touch /app/orchestration/__init__.py && \
+    touch /app/orchestration/utils/__init__.py
+
+# Set Python path for clean imports
+ENV PYTHONPATH="/app"
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Expose port for FastAPI
+EXPOSE 9100
+
+# Launch the app
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "9100"]

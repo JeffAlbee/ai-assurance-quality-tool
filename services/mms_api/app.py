@@ -1,25 +1,49 @@
 print("✅ app.py loaded")
 
+# ─────────────────────────────────────────────────────────────
+# ✅ Path Debugging for Uvicorn Import Failures
+# ─────────────────────────────────────────────────────────────
+import sys
+import os
+
+print(f"📂 Current working directory: {os.getcwd()}")
+print(f"📦 sys.path before patch: {sys.path}")
+
+app_dir = os.path.dirname(__file__)
+if app_dir not in sys.path:
+    sys.path.append(app_dir)
+
+print(f"📦 sys.path after patch: {sys.path}")
+
+# ─────────────────────────────────────────────────────────────
+# ✅ Core Imports
+# ─────────────────────────────────────────────────────────────
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.routing import APIRoute
 import logging
-import redis
 import json
-import os
 from datetime import datetime
 
+from orchestration.utils.redis import get_redis_client
+
 # ─────────────────────────────────────────────────────────────
-# ✅ Route Imports (simplified for container context)
+# ✅ Route Imports (from orchestration)
 # ─────────────────────────────────────────────────────────────
-from mms_api.routes.config import router as config_router
-from mms_api.routes.exports import router as exports_router
-from mms_api.routes.tolerances import router as tolerances_router
-from mms_api.routes.violations import router as violations_router
-from mms_api.routes.labels import router as labels_router
-from mms_api.routes.license import router as license_router
-from mms_api.routes.history import router as history_router
+try:
+    from orchestration.routes.config import router as config_router
+    from orchestration.routes.exports import router as exports_router
+    from orchestration.routes.tolerances import router as tolerances_router
+    from orchestration.routes.violations import router as violations_router
+    from orchestration.routes.labels import router as labels_router
+    from orchestration.routes.license import router as license_router
+    from orchestration.routes.history import router as history_router
+
+    print("✅ Route imports successful")
+except Exception as e:
+    print(f"❌ Route import failed: {e}")
+    raise
 
 # ─────────────────────────────────────────────────────────────
 # ✅ FastAPI Initialization
@@ -42,10 +66,7 @@ app.add_middleware(
 # ✅ Redis Connection
 # ─────────────────────────────────────────────────────────────
 try:
-    REDIS_HOST = "redis"
-    REDIS_PORT = 6379
-    REDIS_DB = 0
-    r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=True)
+    r = get_redis_client()
     r.ping()
     app.state.redis = r
     logging.info("✅ Connected to Redis")
@@ -56,14 +77,18 @@ except Exception as e:
 # ─────────────────────────────────────────────────────────────
 # ✅ Route Registration
 # ─────────────────────────────────────────────────────────────
-app.include_router(config_router)
-app.include_router(exports_router)
-app.include_router(tolerances_router, prefix="/v1/model")
-app.include_router(violations_router, prefix="/v1/model/violations")
-app.include_router(labels_router, prefix="/v1/labels")
-app.include_router(license_router, prefix="/v1/license")
-app.include_router(history_router, prefix="/v1/history")
-logging.info("✅ All routers registered")
+try:
+    app.include_router(config_router)
+    app.include_router(exports_router)
+    app.include_router(tolerances_router, prefix="/v1/model")
+    app.include_router(violations_router, prefix="/v1/model/violations")
+    app.include_router(labels_router, prefix="/v1/labels")
+    app.include_router(license_router, prefix="/v1/license")
+    app.include_router(history_router, prefix="/v1/history")
+    logging.info("✅ All routers registered")
+except Exception as e:
+    logging.error(f"❌ Router registration failed: {e}")
+    raise
 
 # 🔍 Print all registered routes with methods and handlers
 def list_routes(app: FastAPI):
@@ -83,6 +108,21 @@ list_routes(app)
 def health_check():
     logging.info("[MMS-API] 🟢 Health check requested")
     return {"status": "MMS API is running"}
+
+# ─────────────────────────────────────────────────────────────
+# ✅ GET /health → Full Infra Check
+# ─────────────────────────────────────────────────────────────
+@app.get("/health")
+def health_check_full():
+    try:
+        r = get_redis_client()
+        r.ping()
+        config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "orchestration", "model_config.json"))
+        with open(config_path) as f:
+            config = json.load(f)
+        return {"status": "ok", "models": [m["model_id"] for m in config.get("models", [])]}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 # ─────────────────────────────────────────────────────────────
 # ✅ GET /metrics → All Models
@@ -134,11 +174,13 @@ def get_model_metrics(model_id: str):
 # ─────────────────────────────────────────────────────────────
 @app.get("/v1/exports/download")
 def download_export(model_id: str, filename: str):
+    config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "orchestration", "model_config.json"))
+
     try:
-        with open("model_config.json") as f:
+        with open(config_path) as f:
             config = json.load(f)
     except Exception as e:
-        logging.error(f"[MMS-API] ❌ Failed to read model_config.json: {e}")
+        logging.error(f"[MMS-API] ❌ Failed to read {config_path}: {e}")
         return {"error": "Configuration file not found or invalid"}
 
     model = next((m for m in config.get("models", []) if m["model_id"] == model_id), None)
@@ -149,6 +191,7 @@ def download_export(model_id: str, filename: str):
     filepath = os.path.join(export_dir, filename)
 
     if not os.path.exists(filepath):
+        logging.warning(f"[MMS-API] ❌ File not found: {filepath}")
         return {"error": "File not found"}
 
     return FileResponse(path=filepath, filename=filename, media_type="application/json")

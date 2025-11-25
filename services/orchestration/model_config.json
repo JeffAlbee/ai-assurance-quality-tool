@@ -1,0 +1,12 @@
+{
+  "models": [
+    {
+      "model_id": "flood-risk-predictor",
+      "endpoint": "http://localhost:8000",
+      "export_path": "/app/exports",
+      "model_path": "/app/model-builder/FloodRiskModel.pkl",
+      "load_function": "load_model",
+      "metrics_module": "model_builder.metrics"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+[project]
+name = "modelbuilder"
+version = "0.1.0"
+description = "Shared model loading and data fetching logic"
+authors = [{ name = "Jeffrey" }]
+dependencies = []
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"

@@ -1,0 +1,17 @@
+{
+  "id": 3,
+  "uid": "c8b70328-b785-46be-aa1a-fa414542ab65",
+  "orgId": 1,
+  "name": "Redis",
+  "type": "redis-datasource",
+  "typeName": "Redis",
+  "typeLogoUrl": "public/plugins/redis-datasource/img/logo.svg",
+  "access": "proxy",
+  "url": "redis:6379",
+  "user": "",
+  "database": "",
+  "basicAuth": false,
+  "isDefault": false,
+  "jsonData": {},
+  "readOnly": false
+}

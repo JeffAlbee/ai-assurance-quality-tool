@@ -10,4 +10,5 @@ joblib
 sqlalchemy
 requests
 psycopg2-binary
+redis==5.0.1
 

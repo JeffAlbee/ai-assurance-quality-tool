@@ -1,0 +1,25 @@
+{
+  "id": 1,
+  "uid": "df8f44c0-b024-4a63-9f24-cbbbf76a5af4",
+  "orgId": 1,
+  "name": "Assurance_DB",
+  "type": "postgres",
+  "typeName": "PostgreSQL",
+  "typeLogoUrl": "public/app/plugins/datasource/postgres/img/postgresql_logo.svg",
+  "access": "proxy",
+  "url": "postgres:5432",
+  "user": "postgres",
+  "database": "",
+  "basicAuth": false,
+  "isDefault": true,
+  "jsonData": {
+    "connMaxLifetime": 14400,
+    "database": "assurance_db",
+    "maxIdleConns": 100,
+    "maxIdleConnsAuto": true,
+    "maxOpenConns": 100,
+    "postgresVersion": 1200,
+    "sslmode": "disable"
+  },
+  "readOnly": false
+}

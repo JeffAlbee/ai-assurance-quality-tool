@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger("dummy-data")
+
 np.random.seed(42)
 
 n_samples = 100

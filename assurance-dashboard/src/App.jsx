@@ -4,6 +4,7 @@ import MetricDashboard from "./MetricDashboard";
 import ModelConfigForm from "./ModelConfigForm";
 import BaselineTolerances from "./BaselineTolerances";
 import Historian from "./Historian";
+import ConsultingMetrics from "./ConsultingMetrics"; // ✅ NEW IMPORT
 
 function App() {
   const [activeTab, setActiveTab] = useState("grafanaMetrics");
@@ -139,6 +140,14 @@ function App() {
             )}
           </main>
         );
+      case "consulting": // ✅ NEW TAB CASE
+        return (
+          <main className="px-4 py-6">
+            <LicenseHeader />
+            <h2 className="text-xl font-semibold mb-4">Performance Assessment</h2>
+            <ConsultingMetrics />
+          </main>
+        );
       default:
         return <main className="px-4 py-6">Invalid tab selected.</main>;
     }
@@ -151,6 +160,7 @@ function App() {
     { key: "baseline", label: "Baseline & Tolerances" },
     { key: "config", label: "Model Configuration" },
     { key: "license", label: "License" },
+    { key: "consulting", label: "Performance Assessment" }, // ✅ NEW TAB BUTTON
   ];
 
   return (

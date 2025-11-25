@@ -2,17 +2,26 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install dependencies
-COPY assurance-service/requirements.txt .
+# ✅ Install system dependencies
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# ✅ Install Python dependencies
+COPY services/assurance-service/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ✅ Copy the ASGI app
-COPY mms_api/mms_api /app/mms_api
+# ✅ Copy ASGI app and config logic
+COPY services/mms_api/app.py /app/mms_api/app.py
+COPY services/mms_api/__init__.py /app/mms_api/__init__.py
+COPY services/mms_api/export_historian.py /app/mms_api/export_historian.py
+COPY services/mms_api/model_config.json /app/mms_api/model_config.json
 
-# ✅ Copy historian.py directly into /app
-COPY mms-consumer/historian.py /app/historian.py
+# ✅ Copy historian logic
+COPY services/mms-consumer/historian.py /app/historian.py
 
-# ✅ Ensure Python can resolve mms_api and historian
+# ✅ Copy orchestration layer (for shared db, routes, utils)
+COPY services/orchestration /app/orchestration
+
+# ✅ Set PYTHONPATH so all modules are resolvable
 ENV PYTHONPATH=/app
 
 # ✅ Launch the ASGI app

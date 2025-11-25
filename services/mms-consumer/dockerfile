@@ -4,16 +4,21 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # Copy mms-consumer source code
-COPY services/mms-consumer/ ./
+COPY services/mms-consumer/ /app/
 
-# Copy and install model-builder as a local package
-COPY services/model-builder/ /modelbuilder
-RUN pip install /modelbuilder
+# Copy model-builder into /app/model-builder
+COPY services/model-builder/ /app/model-builder/
 
-# Copy model config
-COPY services/mms_api/mms_api/model_config.json ./model_config.json
+# Copy orchestration module into /app/orchestration
+COPY services/orchestration/ /app/orchestration/
 
-# Install mms-consumer dependencies
+# Copy model config (from mms_api if needed)
+COPY services/mms_api/model_config.json /app/model_config.json
+
+# Ensure all modules are discoverable
+ENV PYTHONPATH="${PYTHONPATH}:/app:/app/model-builder"
+
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Default command

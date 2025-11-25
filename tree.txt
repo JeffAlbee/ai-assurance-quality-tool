@@ -64,18 +64,12 @@ jeffalbee@Jeffreys-MacBook-Air ai-assurance-quality-tool % redis-cli GET "metric
 jeffalbee@Jeffreys-MacBook-Air ai-assurance-quality-tool % 
 
 My Folder & File Structure is this: 
-.
-├── assurance-dashboard
+jeffalbee@Jeffreys-MacBook-Air ai-assurance-quality-tool % tree -L 3
+.├── assurance-dashboard
 │   ├── eslint.config.js
 │   ├── index.html
 │   ├── node_modules
-│   │   ├── @babel
-│   │   ├── @esbuild
-│   │   ├── @eslint
-│   │   ├── @eslint-community
-│   │   ├── @humanfs
-│   │   ├── @humanwhocodes
-│   │   ├── package-lock.json
+│   ├── package-lock.json
 │   ├── package.json
 │   ├── public
 │   │   ├── AIA_BB_flavicon.png
@@ -87,23 +81,33 @@ My Folder & File Structure is this:
 │   │   ├── App.css
 │   │   ├── App.jsx
 │   │   ├── assets
+│   │   ├── BaselineTolerances.jsx
+│   │   ├── components
+│   │   ├── historian.jsx
 │   │   ├── index.css
 │   │   ├── LabelTable.jsx
 │   │   ├── main.jsx
 │   │   ├── MetricDashboard.jsx
-│   │   ├── ModelConfigForm.jsx
-│   │   └── ViolationDashboard.jsx
+│   │   └── ModelConfigForm.jsx
 │   ├── tailwind.config.js
 │   └── vite.config.js
 ├── Commit.txt
 ├── docker-compose.yml
+├── export.json
 ├── frontend
+├── get
 ├── grafana
+│   └── provisioning
+│       ├── assurance.json
+│       └── dashboard.yaml
+├── grafana_backup.tar.gz
 ├── helm
 ├── init-scripts
 ├── inject_label.py
+├── keys
 ├── logs
 │   └── inference.log
+├── lrange
 ├── mms-env
 │   ├── bin
 │   │   ├── activate
@@ -123,188 +127,17 @@ My Folder & File Structure is this:
 │   ├── lib
 │   │   └── python3.11
 │   └── pyvenv.cfg
-├── node_modules
-│   ├── asynckit
-│   │   ├── bench.js
-│   │   ├── index.js
-│   │   ├── lib
-│   │   ├── LICENSE
-│   │   ├── package.json
-│   │   ├── parallel.js
-│   │   ├── README.md
-│   │   ├── serial.js
-│   │   ├── serialOrdered.js
-│   │   └── stream.js
-│   ├── axios
-│   │   ├── CHANGELOG.md
-
-│   ├── call-bind-apply-helpers
-│   │   ├── actualApply.d.ts
-│   │   ├── actualApply.js
-
-│   ├── combined-stream
-│   │   ├── lib
-│   │   ├── License
-│   │   ├── package.json
-│   │   ├── Readme.md
-│   │   └── yarn.lock
-│   ├── delayed-stream
-│   │   ├── lib
-│   │   ├── License
-│   │   ├── Makefile
-│   │   ├── package.json
-│   │   └── Readme.md
-│   ├── dunder-proto
-│   │   ├── CHANGELOG.md
-│   │   ├── get.d.ts
-│   │   ├── get.js
-│   │   ├── LICENSE
-│   │   ├── package.json
-│   │   ├── README.md
-│   │   ├── set.d.ts
-│   │   ├── set.js
-│   │   ├── test
-│   │   └── tsconfig.json
-│   ├── es-define-property
-│   │   ├── CHANGELOG.md
-│   │   ├── index.d.ts
-│   │   ├── index.js
-│   │   ├── LICENSE
-│   │   ├── package.json
-│   │   ├── README.md
-│   │   ├── test
-│   │   └── tsconfig.json
-│   ├── es-errors
-│   │   ├── CHANGELOG.md
-│   │   ├── eval.d.ts
-
-│   ├── es-object-atoms
-│   │   ├── CHANGELOG.md
-│   │   ├── index.d.ts
-│   │   ├── index.js
-
-│   ├── es-set-tostringtag
-│   │   ├── CHANGELOG.md
-│   │   ├── index.d.ts
-│   │   ├── index.js
-│   │   ├── LICENSE
-│   │   ├── package.json
-│   │   ├── README.md
-│   │   ├── test
-│   │   └── tsconfig.json
-│   ├── follow-redirects
-│   │   ├── debug.js
-│   │   ├── http.js
-│   │   ├── https.js
-│   │   ├── index.js
-│   │   ├── LICENSE
-│   │   ├── package.json
-│   │   └── README.md
-│   ├── form-data
-│   │   ├── CHANGELOG.md
-│   │   ├── index.d.ts
-│   │   ├── lib
-│   │   ├── License
-│   │   ├── package.json
-│   │   └── README.md
-│   ├── function-bind
-│   │   ├── CHANGELOG.md
-│   │   ├── implementation.js
-│   │   ├── index.js
-│   │   ├── LICENSE
-│   │   ├── package.json
-│   │   ├── README.md
-│   │   └── test
-│   ├── get-intrinsic
-│   │   ├── CHANGELOG.md
-│   │   ├── index.js
-│   │   ├── LICENSE
-│   │   ├── package.json
-│   │   ├── README.md
-│   │   └── test
-│   ├── get-proto
-│   │   ├── CHANGELOG.md
-│   │   ├── index.d.ts
-│   │   ├── index.js
-│   │   ├── LICENSE
-│   │   ├── Object.getPrototypeOf.d.ts
-│   │   ├── Object.getPrototypeOf.js
-│   │   ├── package.json
-│   │   ├── README.md
-│   │   ├── Reflect.getPrototypeOf.d.ts
-│   │   ├── Reflect.getPrototypeOf.js
-│   │   ├── test
-│   │   └── tsconfig.json
-│   ├── gopd
-│   │   ├── CHANGELOG.md
-│   │   ├── gOPD.d.ts
-│   │   ├── gOPD.js
-│   │   ├── index.d.ts
-│   │   ├── index.js
-│   │   ├── LICENSE
-│   │   ├── package.json
-│   │   ├── README.md
-│   │   ├── test
-│   │   └── tsconfig.json
-│   ├── has-symbols
-│   │   ├── CHANGELOG.md
-│   │   ├── index.d.ts
-│   │   ├── index.js
-│   │   ├── LICENSE
-│   │   ├── package.json
-│   │   ├── README.md
-│   │   ├── shams.d.ts
-│   │   ├── shams.js
-│   │   ├── test
-│   │   └── tsconfig.json
-│   ├── has-tostringtag
-│   │   ├── CHANGELOG.md
-│   │   ├── index.d.ts
-│   │   ├── index.js
-│   │   ├── LICENSE
-│   │   ├── package.json
-│   │   ├── README.md
-│   │   ├── shams.d.ts
-│   │   ├── shams.js
-│   │   ├── test
-│   │   └── tsconfig.json
-│   ├── hasown
-│   │   ├── CHANGELOG.md
-│   │   ├── index.d.ts
-│   │   ├── index.js
-│   │   ├── LICENSE
-│   │   ├── package.json
-│   │   ├── README.md
-│   │   └── tsconfig.json
-│   ├── math-intrinsics
-│   │   ├── abs.d.ts
-
-│   ├── mime-db
-│   │   ├── db.json
-│   │   ├── HISTORY.md
-│   │   ├── index.js
-│   │   ├── LICENSE
-│   │   ├── package.json
-│   │   └── README.md
-│   ├── mime-types
-│   │   ├── HISTORY.md
-│   │   ├── index.js
-│   │   ├── LICENSE
-│   │   ├── package.json
-│   │   └── README.md
-│   └── proxy-from-env
-│       ├── index.js
-│       ├── LICENSE
-│       ├── package.json
-│       ├── README.md
-│       └── test.js
 ├── package-lock.json
 ├── package.json
+├── prometheus
+│   └── prometheus.yml
+├── python3.14
 ├── services
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   └── __init__.cpython-314.pyc
 │   ├── assurance-service
 │   │   ├── Dockerfile
-│   │   ├── history.py
-│   │   ├── reporter.py
 │   │   └── requirements.txt
 │   ├── baseline
 │   │   ├── baseline.py
@@ -315,19 +148,25 @@ My Folder & File Structure is this:
 │   ├── kafka-init
 │   │   ├── create-topics.sh
 │   │   └── dockerfile
-│   ├── mms-api
-│   │   ├── app.py
-│   │   └── dockerfile
+│   ├── mms_api
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   ├── dockerfile
+│   │   ├── mms_api
+│   │   └── requirements.txt
 │   ├── mms-consumer
 │   │   ├── consumer.py
 │   │   ├── dockerfile
+│   │   ├── historian.py
 │   │   ├── requirements.txt
 │   │   ├── sample_payload.json
+│   │   ├── scheduler.py
 │   │   ├── send_sample.py
 │   │   └── wait_for_kafka.py
 │   ├── model-builder
 │   │   ├── __pycache__
 │   │   ├── app.py
+│   │   ├── data.py
 │   │   ├── dockerfile
 │   │   ├── FloodRiskModel.pkl
 │   │   ├── generate_dummy_data.py
@@ -338,12 +177,19 @@ My Folder & File Structure is this:
 │   │   ├── train_model.py
 │   │   └── training_data.csv
 │   ├── sidecar-agent
-│   │   ├── agent.py
 │   │   ├── Dockerfile
+│   │   ├── evaluate_model.py
+│   │   ├── legacy_agent.py
 │   │   └── requirements.txt
 │   └── tib-producer-api
 │       ├── Dockerfile
 │       └── ingest.py
+├── shared-data
+│   ├── grafana_exports
+│   │   ├── postgres-datasource.json
+│   │   ├── prometheus-datasource.json
+│   │   └── redis-datasource.json
+│   └── training_data.csv
 ├── tree.txt
 └── venv
     ├── bin
@@ -366,5 +212,5 @@ My Folder & File Structure is this:
     │   └── python3.14
     └── pyvenv.cfg
 
-
-
+221 directories, 316 files
+jeffalbee@Jeffreys-MacBook-Air ai-assurance-quality-tool % 
