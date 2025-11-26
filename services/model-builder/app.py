@@ -30,10 +30,7 @@ file_handler = RotatingFileHandler(
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        file_handler,
-        logging.StreamHandler()
-    ]
+    handlers=[file_handler, logging.StreamHandler()]
 )
 
 # ─────────────────────────────────────────────────────────────
@@ -47,6 +44,22 @@ model = load_model(MODEL_ID)
 # ─────────────────────────────────────────────────────────────
 class InputBatch(BaseModel):
     inputs: list[list[float]]  # e.g., [[74.9, 2], [146.4, 2]]
+
+# ─────────────────────────────────────────────────────────────
+# ✅ Label Normalization (shared with sidecar-agent)
+# ─────────────────────────────────────────────────────────────
+NORMALIZATION_MAP = {
+    "low": "flood_risk_low",
+    "flood_risk_low": "flood_risk_low",
+    "medium": "flood_risk_medium",
+    "flood_risk_medium": "flood_risk_medium",
+    "high": "flood_risk_high",
+    "flood_risk_high": "flood_risk_high",
+}
+
+def normalize_label(label: str) -> str:
+    lab = str(label).strip().lower()
+    return NORMALIZATION_MAP.get(lab, lab)
 
 # ─────────────────────────────────────────────────────────────
 # ✅ Helper: Sanitize Metrics for JSON
@@ -74,14 +87,14 @@ async def predict_endpoint(request: Request):
     model_id = headers.get("x-model-id", MODEL_ID)
     agent_flag = headers.get("x-sidecar-agent", "false")
 
-    logging.info(f"[Model] Inference request received | TXID: {txid} | Model-ID: {model_id} | Sidecar-Agent: {agent_flag}")
+    logging.info(f"[Model] Inference request | TXID={txid} | Model-ID={model_id} | Sidecar-Agent={agent_flag}")
 
     start = time.time()
     body = await request.json()
     features_batch = body.get("inputs", [])
 
     if not features_batch:
-        logging.warning(f"[Model] Empty input batch received | TXID: {txid}")
+        logging.warning(f"[Model] Empty input batch | TXID={txid}")
         return {"error": "Empty input batch", "prediction": [], "metrics": {}}
 
     # Confidence variance stub (simulate confidence scores)
@@ -100,9 +113,10 @@ async def predict_endpoint(request: Request):
         else:
             label = "flood_risk_high"
 
-        derived_labels.append(label)
+        normalized_label = normalize_label(label)
+        derived_labels.append(normalized_label)
         aligned_predictions.append({
-            "label": label,
+            "label": normalized_label,
             "confidence": round(conf, 2)
         })
 
@@ -115,14 +129,14 @@ async def predict_endpoint(request: Request):
         "confidence_variance": confidence_variance
     }
 
-    logging.info(f"[MODEL-BUILDER] Publishing payload={recent_data}")
+    logging.info(f"[MODEL-BUILDER] Payload={recent_data}")
     logging.info(f"[Model] Derived labels: {derived_labels}")
 
     # ✅ Compute metrics using aligned predictions vs derived labels
     metrics = compute_metrics(aligned_predictions, recent_data)
     metrics = sanitize_metrics(metrics)
 
-    logging.info(f"[Model] Prediction: {aligned_predictions} | Latency: {latency}ms | Metrics: {metrics}")
+    logging.info(f"[Model] Prediction={aligned_predictions} | Latency={latency}ms | Metrics={metrics}")
 
     return {
         "prediction": aligned_predictions,

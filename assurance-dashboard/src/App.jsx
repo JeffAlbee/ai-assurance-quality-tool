@@ -58,7 +58,7 @@ function App() {
             <h2 className="text-xl font-semibold mb-4">Real-Time Metrics</h2>
             <div className="rounded border bg-white p-4 shadow">
               <iframe
-                src="http://localhost:3000/goto/cf2c91agdo2kgf?orgId=1"
+                src="http://localhost:3000/goto/mSYJ5WZDR?orgId=1"
                 width="100%"
                 height="750"
                 frameBorder="0"
@@ -91,11 +91,18 @@ function App() {
           <main className="px-4 py-6">
             <LicenseHeader />
             <h2 className="text-xl font-semibold mb-4">Historian Logs</h2>
-            <div className="bg-white p-4 rounded shadow">
-              {Historian ? <Historian /> : <p className="text-sm text-red-600">Historian component failed to load.</p>}
+            <div className="rounded border bg-white p-4 shadow">
+              <iframe
+              src="http://localhost:3000/goto/KJTltWWDg?orgId=1"
+              width="100%"
+              height="750"
+              frameBorder="0"
+              title="Grafana Historian Dashboard"
+              />
             </div>
           </main>
         );
+
       case "baseline":
         return (
           <main className="px-4 py-6">

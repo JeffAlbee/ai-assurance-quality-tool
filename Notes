@@ -1,0 +1,78 @@
+Get F1 & Accuracy flowing
+Enhance Dashboards
+Get Baselines & Tolerances added to the database and configured to compare to real-time metrics
+Get the model configuration page setup 
+
+
+#####F1 & Accuracy Notes: 
+This diagnostic output is actually very revealing, Jeffrey — it confirms why your accuracy and F1 are stuck at 0.0:
+
+🔎 What the logs show
+Ground truth distribution:
+
+Code
+flood_risk_high: 36
+flood_risk_low: 32
+flood_risk_medium: 32
+→ Your dataset has a healthy mix of classes.
+
+Prediction distribution:
+
+Code
+unsafe: 100
+→ The model is predicting only one label: "unsafe".
+
+Confusion matrix:
+
+Code
+Pred   unsafe
+GT
+flood_risk_high   36
+flood_risk_low    32
+flood_risk_medium 32
+→ Every ground truth class is being mapped to "unsafe". No overlap with expected "flood_risk_low", "flood_risk_medium", "flood_risk_high".
+
+Metrics:
+
+Code
+Accuracy=0.0 | F1=0.0
+→ Because none of the predictions match the ground truth vocabulary.
+
+✅ Root cause
+Your model-builder service is returning "unsafe" as its label vocabulary, while your ground truth is in the "flood_risk_*" vocabulary. That mismatch guarantees zero accuracy/F1.
+
+🧭 Next steps to fix
+Align vocabularies
+
+Either update the model-builder to output "flood_risk_low", "flood_risk_medium", "flood_risk_high".
+
+Or update the sidecar normalization map to translate "unsafe" into one of those categories (but that only makes sense if "unsafe" is semantically equivalent to one of them).
+
+Check model-builder logic (app.py)
+
+In your current app.py, you derive labels based on rainfall thresholds (<70 → flood_risk_low, etc.).
+
+But the logs show "unsafe" is being returned instead. That suggests either:
+
+You’re running a different version of the model-builder container, or
+
+The model code was modified to emit "unsafe" instead of "flood_risk_*".
+
+Quick diagnostic in model-builder Add a log line in app.py right before returning predictions:
+
+python
+logging.info(f"[Model] Final predictions being returned: {aligned_predictions}")
+That will confirm exactly what the FastAPI service is emitting.
+
+Data sanity check
+
+Your ground truth looks fine (balanced across classes).
+
+The issue is not the data, but the model output vocabulary.
+
+⚡ Summary
+The sidecar diagnostics are working perfectly — they’ve exposed a vocabulary mismatch.
+
+The model-builder is returning "unsafe" for every input, while ground truth expects "flood_risk_*".
+
+Until those vocabularies are aligned, accuracy and F1 will remain zero.
