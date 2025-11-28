@@ -55,6 +55,7 @@ def compute_metrics(predictions: List[Dict[str, Any]], recent_data: Dict[str, An
     Compute evaluation metrics given predictions and recent input data.
     - Normalizes labels for categorical consistency
     - Logs class coverage and mismatches
+    - Returns keys aligned with downstream consumers (sidecar/TIB)
     """
     try:
         # 🔎 Log the payload (trimmed to key fields to avoid noise)
@@ -110,8 +111,8 @@ def compute_metrics(predictions: List[Dict[str, Any]], recent_data: Dict[str, An
         # Accuracy
         accuracy = float(np.mean(predicted_labels == labels))
 
-        # F1 score (weighted is more stable with class imbalance)
-        f1 = f1_score(labels, predicted_labels, average="weighted")
+        # F1 score (weighted is more stable with class imbalance); suppress divide-by-zero
+        f1 = f1_score(labels, predicted_labels, average="weighted", zero_division=0)
 
         # RMSE (map categories to integers for distance calculation)
         category_map = {"flood_risk_low": 0, "flood_risk_medium": 1, "flood_risk_high": 2}
@@ -123,30 +124,32 @@ def compute_metrics(predictions: List[Dict[str, Any]], recent_data: Dict[str, An
         drift_score = float(calculate_feature_drift(features))
         violations = int(check_domain_violations(predictions))
 
-        # Optional values
-        p95_latency = _to_float(recent_data.get("latency", 180), 180.0)
+        # Optional values (kept optional; latency_ms should be passed separately in response payload)
+        latency_ms = _to_float(recent_data.get("latency"), 180.0)
         failure_rate = _to_float(recent_data.get("failures", 0.01), 0.01)
-        watts = _to_float(recent_data.get("watts", 0.5), 0.5)
+        watts_per_inference = _to_float(recent_data.get("watts", 0.5), 0.5)
         confidence_floor = _to_float(recent_data.get("confidence_floor", 0.81), 0.81)
 
         logger.info(
             f"[METRICS] Computed accuracy={accuracy:.4f}, f1={f1:.4f}, rmse={rmse:.2f}, "
             f"drift={drift_score}, violations={violations} | "
-            f"latency={p95_latency}, failures={failure_rate}, watts={watts}, "
+            f"latency_ms={latency_ms}, failures={failure_rate}, watts={watts_per_inference}, "
             f"floor={confidence_floor}, var={confidence_variance}"
         )
 
         return {
+            # Core fields used by sidecar/TIB response_payload
             "accuracy": round(accuracy, 3),
             "f1_score": round(f1, 3),
+            "confidence_variance": round(confidence_variance, 4),
+            # Optional extras (fine to keep; Grafana can chart these)
             "rmse": round(rmse, 2),
             "feature_drift": drift_score,
             "domain_violation_count": violations,
-            "p95_latency": p95_latency,
+            "latency_ms": latency_ms,  # included for convenience if you want single-source metrics
             "failure_rate": failure_rate,
-            "watts_per_inference": watts,
+            "watts_per_inference": watts_per_inference,
             "confidence_floor": confidence_floor,
-            "confidence_variance": confidence_variance,
         }
 
     except Exception as e:
@@ -157,26 +160,28 @@ def compute_metrics(predictions: List[Dict[str, Any]], recent_data: Dict[str, An
 # 🔧 Fallback and stubs
 # ─────────────────────────────────────────────────────────────
 def _fallback_metrics(recent_data: Dict[str, Any], confidence_variance_fallback: float) -> Dict[str, float]:
-    p95_latency = _to_float(recent_data.get("latency", 180), 180.0)
+    latency_ms = _to_float(recent_data.get("latency"), 180.0)
     failure_rate = _to_float(recent_data.get("failures", 0.01), 0.01)
-    watts = _to_float(recent_data.get("watts", 0.5), 0.5)
+    watts_per_inference = _to_float(recent_data.get("watts", 0.5), 0.5)
     confidence_floor = _to_float(recent_data.get("confidence_floor", 0.81), 0.81)
     confidence_variance = _to_float(confidence_variance_fallback, 0.04)
     return {
         "accuracy": 0.0,
         "f1_score": 0.0,
+        "confidence_variance": confidence_variance,
         "rmse": 0.0,
         "feature_drift": 0.0,
         "domain_violation_count": 0,
-        "p95_latency": p95_latency,
+        "latency_ms": latency_ms,
         "failure_rate": failure_rate,
-        "watts_per_inference": watts,
+        "watts_per_inference": watts_per_inference,
         "confidence_floor": confidence_floor,
-        "confidence_variance": confidence_variance,
     }
 
 def calculate_feature_drift(features: List[List[float]]) -> float:
+    # Stubbed drift score; replace with real computation as needed
     return 0.02
 
 def check_domain_violations(predictions: List[Dict[str, Any]]) -> int:
+    # Stubbed domain violation count; replace with real checks as needed
     return 0

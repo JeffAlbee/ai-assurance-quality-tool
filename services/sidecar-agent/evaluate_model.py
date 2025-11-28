@@ -153,7 +153,7 @@ def compute_accuracy_metrics(y_true, y_pred_raw):
     return metrics
 
 # ✅ Log Metrics to PostgreSQL
-def log_metrics_to_db(metrics):
+def log_metrics_to_db(metrics, latency_ms, system_power_w):
     try:
         db = next(get_db())
         timestamp = datetime.utcnow()
@@ -161,12 +161,16 @@ def log_metrics_to_db(metrics):
             Metric(model_id=MODEL_ID, metric="accuracy", value=metrics["accuracy"], timestamp=timestamp),
             Metric(model_id=MODEL_ID, metric="f1_score", value=metrics["f1_score"], timestamp=timestamp),
             Metric(model_id=MODEL_ID, metric="confidence_variance", value=metrics["confidence_variance"], timestamp=timestamp),
+            # 🔎 New metrics
+            Metric(model_id=MODEL_ID, metric="latency_ms", value=latency_ms, timestamp=timestamp),
+            Metric(model_id=MODEL_ID, metric="system_power_w", value=system_power_w, timestamp=timestamp),
         ]
         db.add_all(entries)
         db.commit()
         logging.info(f"[Sidecar] Metrics persisted to DB at {timestamp.isoformat()}Z")
     except Exception as e:
         logging.error(f"[Sidecar] Failed to persist metrics to DB: {e}")
+
 
 # ✅ Log Predictions to PostgreSQL
 def log_predictions_to_db(inputs, predictions, ground_truths):
@@ -202,11 +206,16 @@ def log_predictions_to_db(inputs, predictions, ground_truths):
     except Exception as e:
         logging.error(f"[Sidecar] Failed to persist predictions to DB: {e}")
 
-# ✅ Store Metrics in Redis
-def store_metrics_in_redis(metrics):
+# ✅ Store Metrics in Redis (extended with latency + system power)
+def store_metrics_in_redis(metrics, latency_ms, system_power_w):
     try:
-        redis_client.set(f"metrics:{MODEL_ID}", json.dumps(metrics))
-        logging.info(f"[Sidecar] Metrics stored in Redis for {MODEL_ID}")
+        # Extend metrics dict before storing
+        enriched_metrics = dict(metrics)  # copy to avoid mutating original
+        enriched_metrics["latency_ms"] = latency_ms
+        enriched_metrics["system_power_w"] = system_power_w
+
+        redis_client.set(f"metrics:{MODEL_ID}", json.dumps(enriched_metrics))
+        logging.info(f"[Sidecar] Metrics stored in Redis for {MODEL_ID} | Keys={list(enriched_metrics.keys())}")
     except Exception as e:
         logging.error(f"[Sidecar] Failed to store metrics in Redis: {e}")
 
@@ -264,38 +273,46 @@ def send_to_assurance(txid, label):
 # ✅ Main Loop
 if __name__ == "__main__":
     while True:
+        # Generate a unique transaction ID for traceability
         txid = str(uuid.uuid4())
+
+        # Prepare inputs and ground truths from your synthetic/test pairs
         inputs = [pair[0] for pair in input_label_pairs]
         ground_truths = [pair[1] for pair in input_label_pairs]
 
+        # Poll the model for predictions
         predictions, latency_ms = poll_model(inputs, txid)
 
         if predictions:
-            # Compute metrics with normalized predictions and diagnostic logging
+            # ✅ Compute metrics with normalized predictions and diagnostic logging
             metrics = compute_accuracy_metrics(ground_truths, predictions)
+            log_confusion_summary(ground_truths, predictions)
 
-            log_confusion_summary(ground_truths, predictions) 
+            # ✅ Persist metrics (including latency + system power)
+            log_metrics_to_db(metrics, latency_ms, SYSTEM_POWER_W)
 
-            # Persist and publish
-            log_metrics_to_db(metrics)
-            store_metrics_in_redis(metrics)
+            # ✅ Store metrics in Redis (include latency + system power)
+            store_metrics_in_redis(metrics, latency_ms, SYSTEM_POWER_W)
+
+            # ✅ Persist predictions to DB for later analysis
             log_predictions_to_db(inputs, predictions, ground_truths)
 
+            # ✅ Build telemetry payload and send to TIB
             payload = build_payload(txid, metrics, latency_ms, inputs, predictions, ground_truths)
             send_to_tib(payload)
 
-            # Send first prediction's normalized label to assurance service
+            # ✅ Send first prediction’s normalized label to assurance service
             first_label = normalize_label(predictions[0].get("label", ""))
             send_to_assurance(txid, first_label)
 
-            
-
+            # ✅ Log summary for this loop iteration
             logging.info(
                 f"[Sidecar] Loop complete | Accuracy={metrics['accuracy']} | "
                 f"F1={metrics['f1_score']} | ConfVar={metrics['confidence_variance']} | "
-                f"Latency(ms)={latency_ms} | TXID={txid}"
+                f"Latency(ms)={latency_ms} | SystemPower(W)={SYSTEM_POWER_W} | TXID={txid}"
             )
         else:
             logging.warning("[Sidecar] No predictions returned; skipping metrics/persistence this cycle.")
 
+        # ✅ Sleep until next polling interval
         time.sleep(POLL_INTERVAL)

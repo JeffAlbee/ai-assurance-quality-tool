@@ -138,7 +138,11 @@ async def predict_endpoint(request: Request):
 
     logging.info(f"[Model] Prediction={aligned_predictions} | Latency={latency}ms | Metrics={metrics}")
 
+    logging.info(f"[Model] Prediction: {aligned_predictions} | Latency: {latency}ms | Metrics: {metrics}")
+
     return {
         "prediction": aligned_predictions,
         "metrics": metrics
+        "latency_ms": latency,
+        "confidence_variance": confidence_variance
     }
